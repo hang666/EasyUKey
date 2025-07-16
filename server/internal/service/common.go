@@ -14,7 +14,7 @@ type WSHubInterface interface {
 	IsUserOnline(userID uint) bool
 	IsDeviceOnline(deviceID uint) bool
 	SendToUser(userID uint, data []byte) error
-	OnDeviceConnect(deviceID uint, userID uint, serialNumber, volumeSerial string) error
+	OnDeviceConnect(deviceID uint) error
 	OnDeviceDisconnect(deviceID uint) error
 	GetOnlineDevicesCount() int
 	LinkDeviceToUser(deviceID uint, userID uint) error

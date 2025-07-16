@@ -55,7 +55,7 @@ func handleDeviceRegister(client *Client, wsMsg *messages.WSMessage) error {
 		if h, ok := hub.(*Hub); ok {
 			h.register <- client
 			// 触发设备连接状态同步
-			hub.OnDeviceConnect(device.ID, device.UserID, regMsg.SerialNumber, regMsg.VolumeSerialNumber)
+			hub.OnDeviceConnect(device.ID)
 		}
 	}
 
@@ -98,6 +98,30 @@ func handleDeviceInit(client *Client, wsMsg *messages.WSMessage) error {
 	if err := wsutil.SendMessageToChannel(client.Send, "device_init_response", initResp); err != nil {
 		logger.Logger.Error("处理device_init_request消息失败", "error", err, "user_id", client.UserID, "device_id", client.DeviceID)
 		return err
+	}
+
+	// 初始化成功后自动注册设备为在线
+	if initResp.Success {
+		var deviceID uint
+		result := global.DB.Table("devices").
+			Select("id").
+			Where("serial_number = ? AND volume_serial_number = ?", initMsg.SerialNumber, initMsg.VolumeSerialNumber).
+			Pluck("id", &deviceID)
+		if result.Error == nil && deviceID > 0 {
+			client.mu.Lock()
+			client.DeviceID = deviceID
+			client.SerialNumber = initMsg.SerialNumber
+			client.VolumeSerialNumber = initMsg.VolumeSerialNumber
+			client.IsRegistered = true
+			client.mu.Unlock()
+
+			if hub := service.GetWSHub(); hub != nil {
+				if h, ok := hub.(*Hub); ok {
+					h.register <- client
+					hub.OnDeviceConnect(deviceID)
+				}
+			}
+		}
 	}
 
 	logger.Logger.Info("device_init_request: 已处理设备初始化请求", "user_id", client.UserID, "device_id", client.DeviceID, "serial_number", initMsg.SerialNumber, "success", initResp.Success)

@@ -391,7 +391,7 @@ func (h *Hub) GetOnlineDevicesList() []map[string]interface{} {
 }
 
 // OnDeviceConnect 设备连接时的回调
-func (h *Hub) OnDeviceConnect(deviceID uint, userID uint, serialNumber, volumeSerialNumber string) error {
+func (h *Hub) OnDeviceConnect(deviceID uint) error {
 	// 使用新的状态同步管理器
 	GlobalStatusSync.UpdateDeviceStatus(deviceID, true)
 	return nil
