@@ -1,0 +1,56 @@
+# 服务器配置
+server:
+  host: "0.0.0.0" # 服务器监听地址
+  port: 8888 # 服务器监听端口
+  graceful_shutdown: "30s" # 优雅关闭超时时间
+
+# 数据库配置
+database:
+  host: "localhost" # 数据库主机
+  port: 3306 # 数据库端口
+  username: "easyukey" # 数据库用户名
+  password: "" # 数据库密码
+  database: "easyukey" # 数据库名
+  charset: "utf8mb4" # 字符集
+  max_idle_connections: 10 # 最大空闲连接数
+  max_open_connections: 100 # 最大打开连接数
+  connection_max_lifetime: "1h" # 连接最大生存时间
+
+# 安全配置
+security:
+  encryption_key: "" # 数据加密密钥
+
+# HTTP服务配置
+http:
+  request_timeout: "30s" # HTTP请求超时时间
+  rate_limit: 20 # 每秒最大请求数
+  request_body_size: "1M" # 请求体大小限制
+
+# WebSocket配置
+websocket:
+  # 连接超时配置
+  write_wait: "10s" # 写入超时时间
+  pong_wait: "60s" # pong等待时间
+  ping_period: "30s" # ping发送周期
+
+  # 消息配置
+  max_message_size: 512 # 最大消息大小（字节）
+
+  # 缓冲区配置
+  send_channel_buffer: 256 # 发送通道缓冲区大小
+  read_buffer_size: 1024 # 读取缓冲区大小
+  write_buffer_size: 1024 # 写入缓冲区大小
+
+  # 压缩配置
+  enable_compression: false # 是否启用压缩
+
+  # 连接限制
+  max_connections: 1000 # 最大连接数
+  connection_timeout: "30s" # 连接超时
+  heartbeat_interval: "30s" # 心跳间隔
+
+# 日志配置
+log:
+  level: "info" # 日志级别: debug, info, warn, error
+  format: "json" # 日志格式: json, text
+  output: "stdout" # 日志输出: stdout, stderr, 或文件路径

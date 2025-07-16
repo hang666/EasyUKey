@@ -1,0 +1,1477 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>EasyUKey 管理面板</title>
+		<script src="https://cdn.tailwindcss.com"></script>
+		<script
+			defer
+			src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"
+		></script>
+		<link
+			rel="stylesheet"
+			href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+		/>
+		<style>
+			[x-cloak] {
+				display: none !important;
+			}
+
+			.fade-in {
+				animation: fadeIn 0.3s ease-in-out;
+			}
+
+			@keyframes fadeIn {
+				from {
+					opacity: 0;
+					transform: translateY(10px);
+				}
+
+				to {
+					opacity: 1;
+					transform: translateY(0);
+				}
+			}
+		</style>
+	</head>
+
+	<body class="bg-gray-100 min-h-screen">
+		<div x-data="adminPanel()" x-init="init()" class="min-h-screen">
+			<!-- 登录界面 -->
+			<div
+				x-show="!isAuthenticated"
+				x-cloak
+				class="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-blue-50 to-indigo-100"
+			>
+				<div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8">
+					<div class="text-center mb-8">
+						<div
+							class="w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white text-3xl mx-auto mb-4"
+						>
+							<i class="fas fa-shield-alt"></i>
+						</div>
+						<h1 class="text-2xl font-bold text-gray-800 mb-2">
+							EasyUKey 管理面板
+						</h1>
+						<p class="text-gray-600">请输入管理员密钥进行登录</p>
+					</div>
+
+					<form @submit.prevent="login()">
+						<div class="mb-4">
+							<label class="block text-sm font-medium text-gray-700 mb-2"
+								>管理员密钥</label
+							>
+							<input
+								x-model="adminKey"
+								type="password"
+								placeholder="请输入管理员API密钥"
+								class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+								required
+							/>
+						</div>
+						<button
+							type="submit"
+							:disabled="loading"
+							class="w-full bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 disabled:from-gray-300 disabled:to-gray-400 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 flex items-center justify-center"
+						>
+							<i
+								class="fas fa-sign-in-alt mr-2"
+								:class="{'animate-spin fa-spinner': loading}"
+							></i>
+							<span x-text="loading ? '验证中...' : '登录'"></span>
+						</button>
+					</form>
+
+					<div
+						x-show="loginError"
+						x-transition
+						class="mt-4 p-4 bg-red-100 border border-red-200 rounded-lg text-center"
+					>
+						<p class="text-red-700" x-text="loginError"></p>
+					</div>
+				</div>
+			</div>
+
+			<!-- 主管理界面 -->
+			<div x-show="isAuthenticated" x-cloak class="flex h-screen bg-gray-100">
+				<!-- 侧边栏 -->
+				<div class="w-64 bg-white shadow-lg flex flex-col">
+					<div class="p-6 border-b border-gray-200">
+						<div class="flex items-center space-x-3">
+							<div
+								class="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center"
+							>
+								<i class="fas fa-shield-alt text-white"></i>
+							</div>
+							<div>
+								<h1 class="text-xl font-bold text-gray-800">EasyUKey</h1>
+								<p class="text-sm text-gray-500">管理面板</p>
+							</div>
+						</div>
+					</div>
+
+					<nav class="flex-1 p-4 space-y-2">
+						<template x-for="tab in tabs" :key="tab.id">
+							<a
+								href="#"
+								@click="switchTab(tab.id)"
+								class="flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors hover:bg-gray-50"
+								:class="currentTab === tab.id ? 'bg-blue-50 text-blue-600 border-r-2 border-blue-600' : 'text-gray-700'"
+							>
+								<i :class="tab.icon + ' w-5'"></i>
+								<span x-text="tab.name"></span>
+							</a>
+						</template>
+					</nav>
+
+					<div class="p-4 border-t border-gray-200">
+						<div class="flex items-center justify-between">
+							<div class="flex items-center space-x-3">
+								<div
+									class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center"
+								>
+									<i class="fas fa-user text-gray-600 text-sm"></i>
+								</div>
+								<div>
+									<p class="text-sm font-medium text-gray-800">管理员</p>
+									<p class="text-xs text-gray-500">已登录</p>
+								</div>
+							</div>
+							<button
+								@click="logout()"
+								class="text-gray-400 hover:text-red-600 transition-colors"
+							>
+								<i class="fas fa-sign-out-alt"></i>
+							</button>
+						</div>
+					</div>
+				</div>
+
+				<!-- 主内容区域 -->
+				<div class="flex-1 flex flex-col overflow-hidden">
+					<header class="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
+						<div class="flex items-center justify-between">
+							<div>
+								<h1
+									class="text-2xl font-semibold text-gray-800"
+									x-text="currentTabData.name"
+								></h1>
+								<p
+									class="text-sm text-gray-600"
+									x-text="currentTabData.desc"
+								></p>
+							</div>
+							<div class="flex items-center space-x-4">
+								<button
+									@click="loadData()"
+									class="p-2 text-gray-600 hover:text-blue-600 transition-colors"
+								>
+									<i
+										class="fas fa-sync-alt"
+										:class="{'animate-spin': loading}"
+									></i>
+								</button>
+							</div>
+						</div>
+					</header>
+
+					<main class="flex-1 overflow-auto p-6 bg-gray-50">
+						<!-- 仪表盘 -->
+						<div x-show="currentTab === 'dashboard'" x-cloak class="fade-in">
+							<div
+								class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
+							>
+								<template x-for="stat in statsCards" :key="stat.key">
+									<div class="bg-white rounded-lg shadow p-6">
+										<div class="flex items-center justify-between">
+											<div>
+												<p
+													class="text-sm font-medium text-gray-600"
+													x-text="stat.name"
+												></p>
+												<p
+													class="text-2xl font-bold text-gray-900"
+													x-text="stats[stat.key]"
+												></p>
+											</div>
+											<div
+												class="w-12 h-12 rounded-lg flex items-center justify-center"
+												:class="stat.bgColor"
+											>
+												<i :class="stat.icon + ' ' + stat.iconColor"></i>
+											</div>
+										</div>
+									</div>
+								</template>
+							</div>
+							<div class="bg-white rounded-lg shadow">
+								<div class="px-6 py-4 border-b border-gray-200">
+									<h3 class="text-lg font-semibold text-gray-800">系统概览</h3>
+								</div>
+								<div class="p-6 text-center text-gray-500">
+									<i class="fas fa-chart-line text-4xl mb-4 text-gray-300"></i>
+									<p>系统运行正常</p>
+								</div>
+							</div>
+						</div>
+
+						<!-- 设备管理 -->
+						<div x-show="currentTab === 'devices'" x-cloak class="fade-in">
+							<div class="bg-white rounded-lg shadow">
+								<div class="px-6 py-4 border-b border-gray-200">
+									<h3 class="text-lg font-semibold text-gray-800">设备列表</h3>
+								</div>
+								<div class="p-6">
+									<div class="overflow-x-auto">
+										<table class="w-full table-auto">
+											<thead>
+												<tr class="border-b border-gray-200 text-left">
+													<th class="pb-3 text-sm font-medium text-gray-600">
+														设备ID
+													</th>
+													<th class="pb-3 text-sm font-medium text-gray-600">
+														序列号
+													</th>
+													<th class="pb-3 text-sm font-medium text-gray-600">
+														绑定用户
+													</th>
+													<th class="pb-3 text-sm font-medium text-gray-600">
+														权限
+													</th>
+													<th class="pb-3 text-sm font-medium text-gray-600">
+														状态
+													</th>
+													<th class="pb-3 text-sm font-medium text-gray-600">
+														最后活跃
+													</th>
+													<th class="pb-3 text-sm font-medium text-gray-600">
+														操作
+													</th>
+												</tr>
+											</thead>
+											<tbody>
+												<template x-for="device in devices" :key="device.id">
+													<tr class="border-b border-gray-100 hover:bg-gray-50">
+														<td
+															class="py-3 text-sm text-gray-800"
+															x-text="device.id"
+														></td>
+														<td
+															class="py-3 text-sm text-gray-600"
+															x-text="device.serial_number || '未知'"
+														></td>
+														<td class="py-3 text-sm text-gray-600">
+															<span
+																x-text="device.user ? device.user.username : '未绑定'"
+															></span>
+														</td>
+														<td class="py-3 text-sm text-gray-600">
+															<span
+																x-text="device.permissions ? device.permissions.join(', ') : '无'"
+															></span>
+														</td>
+														<td class="py-3">
+															<span
+																class="px-2 py-1 text-xs rounded-full"
+																:class="device.is_online ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'"
+																x-text="device.is_online ? '在线' : '离线'"
+															></span>
+														</td>
+														<td
+															class="py-3 text-sm text-gray-600"
+															x-text="formatTime(device.last_heartbeat)"
+														></td>
+														<td class="py-3 space-x-2">
+															<button
+																@click="editDevice(device)"
+																class="text-blue-600 hover:text-blue-800"
+																title="编辑"
+															>
+																<i class="fas fa-edit"></i>
+															</button>
+															<button
+																x-show="device.user"
+																@click="unlinkDevice(device)"
+																class="text-red-600 hover:text-red-800"
+																title="解绑用户"
+															>
+																<i class="fas fa-unlink"></i>
+															</button>
+															<button
+																x-show="!device.user"
+																@click="openLinkModal(device)"
+																class="text-green-600 hover:text-green-800"
+																title="绑定用户"
+															>
+																<i class="fas fa-link"></i>
+															</button>
+															<button
+																@click="offlineDevice(device)"
+																class="text-orange-600 hover:text-orange-800"
+																:disabled="!device.is_online"
+																title="强制下线"
+															>
+																<i class="fas fa-power-off"></i>
+															</button>
+														</td>
+													</tr>
+												</template>
+												<tr x-show="!devices.length">
+													<td
+														colspan="7"
+														class="py-8 text-center text-gray-500"
+													>
+														暂无设备数据
+													</td>
+												</tr>
+											</tbody>
+										</table>
+									</div>
+									<!-- 分页组件 -->
+									<div
+										x-show="pagination.devices.total > 0"
+										class="mt-4 flex items-center justify-between"
+									>
+										<div class="text-sm text-gray-700">
+											显示
+											<span
+												x-text="(pagination.devices.page - 1) * pagination.devices.pageSize + 1"
+											></span>
+											到
+											<span
+												x-text="Math.min(pagination.devices.page * pagination.devices.pageSize, pagination.devices.total)"
+											></span>
+											共 <span x-text="pagination.devices.total"></span> 条
+										</div>
+										<div class="flex space-x-2">
+											<button
+												@click="changePage('devices', pagination.devices.page - 1)"
+												:disabled="pagination.devices.page <= 1"
+												class="px-3 py-1 bg-gray-200 text-gray-600 rounded hover:bg-gray-300 disabled:opacity-50"
+											>
+												上一页
+											</button>
+											<button
+												@click="changePage('devices', pagination.devices.page + 1)"
+												:disabled="pagination.devices.page >= Math.ceil(pagination.devices.total / pagination.devices.pageSize)"
+												class="px-3 py-1 bg-gray-200 text-gray-600 rounded hover:bg-gray-300 disabled:opacity-50"
+											>
+												下一页
+											</button>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+
+						<!-- 用户管理 -->
+						<div x-show="currentTab === 'users'" x-cloak class="fade-in">
+							<div class="bg-white rounded-lg shadow">
+								<div
+									class="px-6 py-4 border-b border-gray-200 flex items-center justify-between"
+								>
+									<h3 class="text-lg font-semibold text-gray-800">用户列表</h3>
+									<button
+										@click="openNewUserModal()"
+										class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+									>
+										<i class="fas fa-plus mr-2"></i>新建用户
+									</button>
+								</div>
+								<div class="p-6">
+									<div class="overflow-x-auto">
+										<table class="w-full table-auto">
+											<thead>
+												<tr class="border-b border-gray-200 text-left">
+													<th class="pb-3 text-sm font-medium text-gray-600">
+														ID
+													</th>
+													<th class="pb-3 text-sm font-medium text-gray-600">
+														用户名
+													</th>
+													<th class="pb-3 text-sm font-medium text-gray-600">
+														权限
+													</th>
+													<th class="pb-3 text-sm font-medium text-gray-600">
+														状态
+													</th>
+													<th class="pb-3 text-sm font-medium text-gray-600">
+														创建时间
+													</th>
+													<th class="pb-3 text-sm font-medium text-gray-600">
+														操作
+													</th>
+												</tr>
+											</thead>
+											<tbody>
+												<template x-for="user in users" :key="user.id">
+													<tr class="border-b border-gray-100 hover:bg-gray-50">
+														<td
+															class="py-3 text-sm text-gray-800"
+															x-text="user.id"
+														></td>
+														<td
+															class="py-3 text-sm text-gray-600"
+															x-text="user.username"
+														></td>
+														<td class="py-3 text-sm text-gray-600">
+															<span
+																x-text="user.permissions ? user.permissions.join(', ') : '无'"
+															></span>
+														</td>
+														<td class="py-3">
+															<span
+																class="px-2 py-1 text-xs rounded-full"
+																:class="user.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'"
+																x-text="user.is_active ? '正常' : '禁用'"
+															></span>
+														</td>
+														<td
+															class="py-3 text-sm text-gray-600"
+															x-text="formatTime(user.created_at)"
+														></td>
+														<td class="py-3 space-x-2">
+															<button
+																@click="editUser(user)"
+																class="text-blue-600 hover:text-blue-800"
+																title="编辑"
+															>
+																<i class="fas fa-edit"></i>
+															</button>
+															<button
+																@click="deleteUser(user)"
+																class="text-red-600 hover:text-red-800"
+																title="删除"
+															>
+																<i class="fas fa-trash"></i>
+															</button>
+														</td>
+													</tr>
+												</template>
+												<tr x-show="!users.length">
+													<td
+														colspan="7"
+														class="py-8 text-center text-gray-500"
+													>
+														暂无用户数据
+													</td>
+												</tr>
+											</tbody>
+										</table>
+									</div>
+									<!-- 分页组件 -->
+									<div
+										x-show="pagination.users.total > 0"
+										class="mt-4 flex items-center justify-between"
+									>
+										<div class="text-sm text-gray-700">
+											显示
+											<span
+												x-text="(pagination.users.page - 1) * pagination.users.pageSize + 1"
+											></span>
+											到
+											<span
+												x-text="Math.min(pagination.users.page * pagination.users.pageSize, pagination.users.total)"
+											></span>
+											共 <span x-text="pagination.users.total"></span> 条
+										</div>
+										<div class="flex space-x-2">
+											<button
+												@click="changePage('users', pagination.users.page - 1)"
+												:disabled="pagination.users.page <= 1"
+												class="px-3 py-1 bg-gray-200 text-gray-600 rounded hover:bg-gray-300 disabled:opacity-50"
+											>
+												上一页
+											</button>
+											<button
+												@click="changePage('users', pagination.users.page + 1)"
+												:disabled="pagination.users.page >= Math.ceil(pagination.users.total / pagination.users.pageSize)"
+												class="px-3 py-1 bg-gray-200 text-gray-600 rounded hover:bg-gray-300 disabled:opacity-50"
+											>
+												下一页
+											</button>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+
+						<!-- API密钥管理 -->
+						<div x-show="currentTab === 'apikeys'" x-cloak class="fade-in">
+							<div class="bg-white rounded-lg shadow">
+								<div
+									class="px-6 py-4 border-b border-gray-200 flex items-center justify-between"
+								>
+									<h3 class="text-lg font-semibold text-gray-800">API密钥</h3>
+									<button
+										@click="showModal = true"
+										class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+									>
+										<i class="fas fa-plus mr-2"></i>生成密钥
+									</button>
+								</div>
+								<div class="p-6">
+									<div class="overflow-x-auto">
+										<table class="w-full table-auto">
+											<thead>
+												<tr class="border-b border-gray-200 text-left">
+													<th class="pb-3 text-sm font-medium text-gray-600">
+														名称
+													</th>
+													<th class="pb-3 text-sm font-medium text-gray-600">
+														密钥
+													</th>
+													<th class="pb-3 text-sm font-medium text-gray-600">
+														类型
+													</th>
+													<th class="pb-3 text-sm font-medium text-gray-600">
+														创建时间
+													</th>
+													<th class="pb-3 text-sm font-medium text-gray-600">
+														状态
+													</th>
+													<th class="pb-3 text-sm font-medium text-gray-600">
+														操作
+													</th>
+												</tr>
+											</thead>
+											<tbody>
+												<template x-for="key in apikeys" :key="key.id">
+													<tr class="border-b border-gray-100 hover:bg-gray-50">
+														<td
+															class="py-3 text-sm text-gray-800"
+															x-text="key.name"
+														></td>
+														<td
+															class="py-3 text-sm text-gray-600 font-mono"
+															x-text="key.api_key ? key.api_key.substring(0, 20) + '...' : '***'"
+														></td>
+														<td class="py-3">
+															<span
+																class="px-2 py-1 text-xs rounded-full"
+																:class="key.is_admin ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'"
+																x-text="key.is_admin ? '管理员' : '普通'"
+															></span>
+														</td>
+														<td
+															class="py-3 text-sm text-gray-600"
+															x-text="formatTime(key.created_at)"
+														></td>
+														<td class="py-3">
+															<span
+																class="px-2 py-1 text-xs rounded-full"
+																:class="key.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'"
+																x-text="key.is_active ? '正常' : '禁用'"
+															></span>
+														</td>
+														<td class="py-3">
+															<button
+																@click="copyKey(key)"
+																class="text-blue-600 hover:text-blue-800"
+																:disabled="!key.api_key"
+															>
+																<i class="fas fa-copy"></i>
+															</button>
+														</td>
+													</tr>
+												</template>
+												<tr x-show="!apikeys.length">
+													<td
+														colspan="6"
+														class="py-8 text-center text-gray-500"
+													>
+														暂无API密钥
+													</td>
+												</tr>
+											</tbody>
+										</table>
+									</div>
+									<!-- 分页组件 -->
+									<div
+										x-show="pagination.apikeys.total > 0"
+										class="mt-4 flex items-center justify-between"
+									>
+										<div class="text-sm text-gray-700">
+											显示
+											<span
+												x-text="(pagination.apikeys.page - 1) * pagination.apikeys.pageSize + 1"
+											></span>
+											到
+											<span
+												x-text="Math.min(pagination.apikeys.page * pagination.apikeys.pageSize, pagination.apikeys.total)"
+											></span>
+											共 <span x-text="pagination.apikeys.total"></span> 条
+										</div>
+										<div class="flex space-x-2">
+											<button
+												@click="changePage('apikeys', pagination.apikeys.page - 1)"
+												:disabled="pagination.apikeys.page <= 1"
+												class="px-3 py-1 bg-gray-200 text-gray-600 rounded hover:bg-gray-300 disabled:opacity-50"
+											>
+												上一页
+											</button>
+											<button
+												@click="changePage('apikeys', pagination.apikeys.page + 1)"
+												:disabled="pagination.apikeys.page >= Math.ceil(pagination.apikeys.total / pagination.apikeys.pageSize)"
+												class="px-3 py-1 bg-gray-200 text-gray-600 rounded hover:bg-gray-300 disabled:opacity-50"
+											>
+												下一页
+											</button>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</main>
+				</div>
+			</div>
+
+			<!-- API密钥创建模态框 -->
+			<div
+				x-show="showModal"
+				x-cloak
+				class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+			>
+				<div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+					<div class="px-6 py-4 border-b border-gray-200">
+						<h3 class="text-lg font-semibold text-gray-800">生成API密钥</h3>
+					</div>
+					<div class="p-6">
+						<form @submit.prevent="createKey()">
+							<div class="mb-4">
+								<label class="block text-sm font-medium text-gray-700 mb-2"
+									>密钥名称</label
+								>
+								<input
+									x-model="newKey.name"
+									type="text"
+									class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+									required
+								/>
+							</div>
+							<div class="mb-4">
+								<label class="block text-sm font-medium text-gray-700 mb-2"
+									>描述</label
+								>
+								<textarea
+									x-model="newKey.description"
+									class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+									rows="3"
+								></textarea>
+							</div>
+							<div class="mb-4">
+								<label class="flex items-center">
+									<input
+										x-model="newKey.is_admin"
+										type="checkbox"
+										class="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+									/>
+									<span class="ml-2 text-sm text-gray-700">管理员权限</span>
+								</label>
+							</div>
+							<div class="flex space-x-3">
+								<button
+									type="button"
+									@click="showModal = false"
+									class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+								>
+									取消
+								</button>
+								<button
+									type="submit"
+									class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+								>
+									生成
+								</button>
+							</div>
+						</form>
+					</div>
+				</div>
+			</div>
+
+			<!-- 用户创建模态框 -->
+			<div
+				x-show="showUserModal"
+				x-cloak
+				class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+			>
+				<div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+					<div class="px-6 py-4 border-b border-gray-200">
+						<h3
+							class="text-lg font-semibold text-gray-800"
+							x-text="selectedUser ? '编辑用户' : '新建用户'"
+						></h3>
+					</div>
+					<div class="p-6">
+						<form @submit.prevent="selectedUser ? updateUser() : createUser()">
+							<div class="mb-4">
+								<label class="block text-sm font-medium text-gray-700 mb-2"
+									>用户名</label
+								>
+								<input
+									x-model="userForm.username"
+									type="text"
+									class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+									required
+								/>
+							</div>
+							<div class="mb-4">
+								<label class="block text-sm font-medium text-gray-700 mb-2"
+									>权限</label
+								>
+								<textarea
+									x-model="userForm.permissions"
+									class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+									rows="3"
+									placeholder='["login", "pay"]'
+								></textarea>
+							</div>
+							<div x-show="selectedUser" class="mb-4">
+								<label class="flex items-center">
+									<input
+										x-model="userForm.is_active"
+										type="checkbox"
+										class="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+									/>
+									<span class="ml-2 text-sm text-gray-700">用户激活</span>
+								</label>
+							</div>
+							<div class="flex space-x-3">
+								<button
+									type="button"
+									@click="showUserModal = false; selectedUser = null; resetUserForm()"
+									class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+								>
+									取消
+								</button>
+								<button
+									type="submit"
+									class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+									x-text="selectedUser ? '更新' : '创建'"
+								></button>
+							</div>
+						</form>
+					</div>
+				</div>
+			</div>
+
+			<!-- 设备编辑模态框 -->
+			<div
+				x-show="showDeviceModal"
+				x-cloak
+				class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+			>
+				<div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+					<div class="px-6 py-4 border-b border-gray-200">
+						<h3 class="text-lg font-semibold text-gray-800">编辑设备</h3>
+					</div>
+					<div class="p-6">
+						<form @submit.prevent="updateDevice()">
+							<div class="mb-4">
+								<label class="block text-sm font-medium text-gray-700 mb-2"
+									>设备名称</label
+								>
+								<input
+									x-model="deviceForm.name"
+									type="text"
+									class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+									required
+								/>
+							</div>
+							<div class="mb-4">
+								<label class="block text-sm font-medium text-gray-700 mb-2"
+									>权限</label
+								>
+								<textarea
+									x-model="deviceForm.permissions"
+									class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+									rows="3"
+									placeholder='["login", "pay"]'
+								></textarea>
+								<p class="text-xs text-gray-500 mt-1">
+									设备权限必须在绑定用户的权限范围内
+								</p>
+							</div>
+							<div class="mb-4">
+								<label class="flex items-center">
+									<input
+										x-model="deviceForm.is_active"
+										type="checkbox"
+										class="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+									/>
+									<span class="ml-2 text-sm text-gray-700">设备激活</span>
+								</label>
+							</div>
+							<div class="flex space-x-3">
+								<button
+									type="button"
+									@click="showDeviceModal = false; selectedDevice = null; resetDeviceForm()"
+									class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+								>
+									取消
+								</button>
+								<button
+									type="submit"
+									class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+								>
+									更新
+								</button>
+							</div>
+						</form>
+					</div>
+				</div>
+			</div>
+
+			<!-- 设备绑定用户模态框 -->
+			<div
+				x-show="showLinkModal"
+				x-cloak
+				class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+			>
+				<div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+					<div class="px-6 py-4 border-b border-gray-200">
+						<h3 class="text-lg font-semibold text-gray-800">绑定用户</h3>
+					</div>
+					<div class="p-6">
+						<form @submit.prevent="linkDevice()">
+							<div class="mb-4">
+								<label class="block text-sm font-medium text-gray-700 mb-2"
+									>选择用户</label
+								>
+								<select
+									x-model="linkUserId"
+									class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+									required
+								>
+									<option value="">请选择用户</option>
+									<template x-for="user in users" :key="user.id">
+										<option :value="user.id" x-text="user.username"></option>
+									</template>
+								</select>
+							</div>
+							<div class="flex space-x-3">
+								<button
+									type="button"
+									@click="showLinkModal = false; selectedDevice = null; linkUserId = ''"
+									class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+								>
+									取消
+								</button>
+								<button
+									type="submit"
+									class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+								>
+									绑定
+								</button>
+							</div>
+						</form>
+					</div>
+				</div>
+			</div>
+
+			<!-- 加载状态 -->
+			<div
+				x-show="loading"
+				x-cloak
+				class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+			>
+				<div class="bg-white rounded-lg p-6 shadow-xl">
+					<div class="flex items-center space-x-4">
+						<div
+							class="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"
+						></div>
+						<p class="text-gray-600">加载中...</p>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<script>
+			function adminPanel() {
+				return {
+					// 状态
+					currentTab: "dashboard",
+					loading: false,
+					isAuthenticated: false,
+					showModal: false,
+					showUserModal: false,
+					showDeviceModal: false,
+					showLinkModal: false,
+					loginError: "",
+					authToken: null,
+					adminKey: "",
+
+					// 分页状态
+					pagination: {
+						devices: { page: 1, pageSize: 10, total: 0 },
+						users: { page: 1, pageSize: 10, total: 0 },
+						apikeys: { page: 1, pageSize: 10, total: 0 },
+					},
+
+					// 配置
+					tabs: [
+						{
+							id: "dashboard",
+							name: "仪表盘",
+							desc: "系统概览和统计信息",
+							icon: "fas fa-chart-line",
+						},
+						{
+							id: "devices",
+							name: "设备管理",
+							desc: "查看和管理连接的设备",
+							icon: "fa-brands fa-usb",
+						},
+						{
+							id: "users",
+							name: "用户管理",
+							desc: "管理系统用户",
+							icon: "fas fa-users",
+						},
+						{
+							id: "apikeys",
+							name: "API密钥管理",
+							desc: "管理API访问密钥",
+							icon: "fas fa-key",
+						},
+					],
+
+					statsCards: [
+						{
+							key: "onlineDevices",
+							name: "在线设备",
+							icon: "fa-brands fa-usb",
+							bgColor: "bg-green-100",
+							iconColor: "text-green-600",
+						},
+						{
+							key: "totalDevices",
+							name: "总设备数",
+							icon: "fas fa-microchip",
+							bgColor: "bg-blue-100",
+							iconColor: "text-blue-600",
+						},
+						{
+							key: "activeDevices",
+							name: "活跃设备",
+							icon: "fas fa-bolt",
+							bgColor: "bg-yellow-100",
+							iconColor: "text-yellow-600",
+						},
+						{
+							key: "boundDevices",
+							name: "已绑定设备",
+							icon: "fas fa-link",
+							bgColor: "bg-purple-100",
+							iconColor: "text-purple-600",
+						},
+					],
+
+					// 数据
+					stats: {
+						onlineDevices: 0,
+						totalDevices: 0,
+						activeDevices: 0,
+						boundDevices: 0,
+					},
+					devices: [],
+					users: [],
+					apikeys: [],
+					newKey: { name: "", description: "", is_admin: false },
+					selectedDevice: null,
+					selectedUser: null,
+					linkUserId: "",
+					userForm: {
+						username: "",
+						permissions: '["login"]',
+						is_active: true,
+					},
+					deviceForm: {
+						name: "",
+						permissions: "[]",
+						is_active: true,
+					},
+
+					// 计算属性
+					get currentTabData() {
+						return (
+							this.tabs.find((tab) => tab.id === this.currentTab) ||
+							this.tabs[0]
+						);
+					},
+
+					init() {
+						const token = localStorage.getItem("admin_token");
+						if (token) {
+							this.authToken = token;
+							this.adminKey = token;
+							try {
+								this.loadData();
+								this.isAuthenticated = true;
+							} catch (error) {
+								localStorage.removeItem("admin_token");
+								this.authToken = null;
+								this.adminKey = "";
+							}
+						}
+					},
+
+					async login() {
+						if (!this.adminKey) return;
+						this.loading = true;
+						this.loginError = "";
+
+						try {
+							const result = await this.api("/api/v1/admin/verify", {
+								method: "POST",
+								body: JSON.stringify({ admin_key: this.adminKey }),
+							});
+
+							if (result.success) {
+								localStorage.setItem("admin_token", this.adminKey);
+								this.authToken = this.adminKey;
+								this.isAuthenticated = true;
+								await this.loadData();
+							} else {
+								this.loginError = result.message || "登录失败";
+							}
+						} catch (error) {
+							this.loginError = "网络错误，请稍后重试";
+						} finally {
+							this.loading = false;
+						}
+					},
+
+					logout() {
+						this.isAuthenticated = false;
+						this.authToken = null;
+						this.adminKey = "";
+						localStorage.removeItem("admin_token");
+						this.resetData();
+					},
+
+					resetData() {
+						this.stats = {
+							onlineDevices: 0,
+							totalDevices: 0,
+							activeDevices: 0,
+							boundDevices: 0,
+						};
+						this.devices = [];
+						this.users = [];
+						this.apikeys = [];
+						this.pagination = {
+							devices: { page: 1, pageSize: 10, total: 0 },
+							users: { page: 1, pageSize: 10, total: 0 },
+							apikeys: { page: 1, pageSize: 10, total: 0 },
+						};
+					},
+
+					switchTab(tabId) {
+						this.currentTab = tabId;
+						this.loadData();
+					},
+
+					async loadData() {
+						if (!this.isAuthenticated) return;
+						this.loading = true;
+
+						try {
+							if (this.currentTab === "dashboard") {
+								const statsData = await this.api(
+									"/api/v1/admin/devices/statistics"
+								);
+								if (statsData.success) {
+									this.stats = {
+										totalDevices: statsData.data.total_devices || 0,
+										onlineDevices: statsData.data.online_devices || 0,
+										activeDevices: statsData.data.active_devices || 0,
+										boundDevices: statsData.data.bound_devices || 0,
+									};
+								}
+							} else if (this.currentTab === "devices") {
+								await this.loadDevices();
+							} else if (this.currentTab === "users") {
+								await this.loadUsers();
+							} else if (this.currentTab === "apikeys") {
+								await this.loadApiKeys();
+							}
+						} catch (error) {
+							this.showMsg("加载数据失败: " + error.message, "error");
+						} finally {
+							this.loading = false;
+						}
+					},
+
+					async loadDevices() {
+						const p = this.pagination.devices;
+						const result = await this.api(
+							`/api/v1/admin/devices?page=${p.page}&page_size=${p.pageSize}`
+						);
+						if (result.success) {
+							this.devices = result.data || [];
+							this.pagination.devices.total = result.total || 0;
+						}
+					},
+
+					async loadUsers() {
+						const p = this.pagination.users;
+						const result = await this.api(
+							`/api/v1/admin/users?page=${p.page}&page_size=${p.pageSize}`
+						);
+						if (result.success) {
+							this.users = result.data || [];
+							this.pagination.users.total = result.total || 0;
+						}
+					},
+
+					async loadApiKeys() {
+						const p = this.pagination.apikeys;
+						const result = await this.api(
+							`/api/v1/admin/apikeys?page=${p.page}&page_size=${p.pageSize}`
+						);
+						if (result.success) {
+							this.apikeys = result.data || [];
+							this.pagination.apikeys.total = result.total || 0;
+						}
+					},
+
+					async changePage(type, page) {
+						if (page < 1) return;
+						this.pagination[type].page = page;
+
+						if (type === "devices") await this.loadDevices();
+						else if (type === "users") await this.loadUsers();
+						else if (type === "apikeys") await this.loadApiKeys();
+					},
+
+					async createKey() {
+						if (!this.newKey.name) return;
+						this.loading = true;
+
+						try {
+							const result = await this.api("/api/v1/admin/apikeys", {
+								method: "POST",
+								body: JSON.stringify(this.newKey),
+							});
+
+							if (result.success) {
+								await this.loadApiKeys();
+								this.showModal = false;
+								this.newKey = { name: "", description: "", is_admin: false };
+								this.showMsg("API密钥创建成功");
+							}
+						} catch (error) {
+							this.showMsg("创建失败: " + error.message, "error");
+						} finally {
+							this.loading = false;
+						}
+					},
+
+					async createUser() {
+						if (!this.userForm.username) return;
+						this.loading = true;
+
+						try {
+							let permissions;
+							try {
+								permissions = JSON.parse(
+									this.userForm.permissions || '["login"]'
+								);
+							} catch (e) {
+								this.showMsg("权限格式错误，请使用JSON数组格式", "error");
+								this.loading = false;
+								return;
+							}
+
+							const userData = {
+								username: this.userForm.username,
+								permissions: permissions,
+							};
+
+							const result = await this.api("/api/v1/admin/users", {
+								method: "POST",
+								body: JSON.stringify(userData),
+							});
+
+							if (result.success) {
+								await this.loadUsers();
+								this.showUserModal = false;
+								this.selectedUser = null;
+								this.resetUserForm();
+								this.showMsg("用户创建成功");
+							}
+						} catch (error) {
+							this.showMsg("创建失败: " + error.message, "error");
+						} finally {
+							this.loading = false;
+						}
+					},
+
+					async updateUser() {
+						if (!this.selectedUser || !this.userForm.username) return;
+						this.loading = true;
+
+						try {
+							let permissions;
+							try {
+								permissions = JSON.parse(
+									this.userForm.permissions || '["login"]'
+								);
+							} catch (e) {
+								this.showMsg("权限格式错误，请使用JSON数组格式", "error");
+								this.loading = false;
+								return;
+							}
+
+							const userData = {
+								username: this.userForm.username,
+								permissions: permissions,
+								is_active: this.userForm.is_active,
+							};
+
+							const result = await this.api(
+								`/api/v1/admin/users/${this.selectedUser.id}`,
+								{
+									method: "PUT",
+									body: JSON.stringify(userData),
+								}
+							);
+
+							if (result.success) {
+								await this.loadUsers();
+								this.showUserModal = false;
+								this.selectedUser = null;
+								this.resetUserForm();
+								this.showMsg("用户更新成功");
+							}
+						} catch (error) {
+							this.showMsg("更新失败: " + error.message, "error");
+						} finally {
+							this.loading = false;
+						}
+					},
+
+					async deleteUser(user) {
+						if (!confirm(`确定要删除用户 ${user.username} 吗？`)) return;
+						this.loading = true;
+
+						try {
+							const result = await this.api(`/api/v1/admin/users/${user.id}`, {
+								method: "DELETE",
+							});
+
+							if (result.success) {
+								await this.loadUsers();
+								this.showMsg("用户删除成功");
+							}
+						} catch (error) {
+							this.showMsg("删除失败: " + error.message, "error");
+						} finally {
+							this.loading = false;
+						}
+					},
+
+					async updateDevice() {
+						if (!this.selectedDevice) return;
+						this.loading = true;
+
+						try {
+							let permissions;
+							try {
+								permissions = JSON.parse(this.deviceForm.permissions || "[]");
+							} catch (e) {
+								this.showMsg("权限格式错误，请使用JSON数组格式", "error");
+								this.loading = false;
+								return;
+							}
+
+							const deviceData = {
+								name: this.deviceForm.name,
+								permissions: permissions,
+								is_active: this.deviceForm.is_active,
+							};
+
+							const result = await this.api(
+								`/api/v1/admin/devices/${this.selectedDevice.id}`,
+								{
+									method: "PUT",
+									body: JSON.stringify(deviceData),
+								}
+							);
+
+							if (result.success) {
+								await this.loadDevices();
+								this.showDeviceModal = false;
+								this.selectedDevice = null;
+								this.resetDeviceForm();
+								this.showMsg("设备更新成功");
+							}
+						} catch (error) {
+							this.showMsg("更新失败: " + error.message, "error");
+						} finally {
+							this.loading = false;
+						}
+					},
+
+					async linkDevice() {
+						if (!this.selectedDevice || !this.linkUserId) return;
+						this.loading = true;
+
+						try {
+							const result = await this.api(
+								`/api/v1/admin/devices/${this.selectedDevice.id}/user`,
+								{
+									method: "POST",
+									body: JSON.stringify({ user_id: parseInt(this.linkUserId) }),
+								}
+							);
+
+							if (result.success) {
+								await this.loadDevices();
+								this.showLinkModal = false;
+								this.selectedDevice = null;
+								this.linkUserId = "";
+								this.showMsg("设备绑定成功");
+							}
+						} catch (error) {
+							this.showMsg("绑定失败: " + error.message, "error");
+						} finally {
+							this.loading = false;
+						}
+					},
+
+					async unlinkDevice(device) {
+						if (!confirm(`确定要解绑设备 ${device.id} 吗？`)) return;
+						this.loading = true;
+
+						try {
+							const result = await this.api(
+								`/api/v1/admin/devices/${device.id}/user`,
+								{
+									method: "DELETE",
+								}
+							);
+
+							if (result.success) {
+								await this.loadDevices();
+								this.showMsg("设备解绑成功");
+							}
+						} catch (error) {
+							this.showMsg("解绑失败: " + error.message, "error");
+						} finally {
+							this.loading = false;
+						}
+					},
+
+					async offlineDevice(device) {
+						if (!device.is_online) return this.showMsg("设备已离线", "error");
+						if (!confirm(`确定要将设备 ${device.id} 设为离线吗？`)) return;
+
+						this.loading = true;
+						try {
+							await this.api(`/api/v1/admin/devices/${device.id}/offline`, {
+								method: "POST",
+							});
+							await this.loadDevices();
+							this.showMsg("设备已成功离线");
+						} catch (error) {
+							this.showMsg("操作失败: " + error.message, "error");
+						} finally {
+							this.loading = false;
+						}
+					},
+
+					async copyKey(key) {
+						if (!key.api_key) return this.showMsg("API密钥不可用", "error");
+						try {
+							await navigator.clipboard.writeText(key.api_key);
+							this.showMsg("已复制到剪贴板");
+						} catch (error) {
+							this.showMsg("复制失败", "error");
+						}
+					},
+
+					async api(url, options = {}) {
+						const headers = {
+							"Content-Type": "application/json",
+							...options.headers,
+						};
+						if (this.authToken) headers["X-API-Key"] = `${this.authToken}`;
+
+						const response = await fetch(url, { headers, ...options });
+						if (!response.ok) {
+							if (response.status === 401) {
+								this.logout();
+								throw new Error("认证失败，请重新登录");
+							}
+							throw new Error(
+								`HTTP ${response.status}: ${response.statusText}`
+							);
+						}
+						return await response.json();
+					},
+
+					formatTime(dateString) {
+						return dateString
+							? new Date(dateString).toLocaleString("zh-CN")
+							: "从未";
+					},
+
+					showMsg(message, type = "success") {
+						alert(message); // 可替换为更好的提示组件
+					},
+
+					openNewUserModal() {
+						this.selectedUser = null;
+						this.resetUserForm();
+						this.showUserModal = true;
+					},
+
+					editUser(user) {
+						this.selectedUser = user;
+						this.userForm = {
+							username: user.username,
+							permissions: JSON.stringify(user.permissions || ["login"]),
+							is_active: user.is_active,
+						};
+						this.showUserModal = true;
+					},
+
+					editDevice(device) {
+						this.selectedDevice = device;
+						this.deviceForm = {
+							name: device.name || "",
+							permissions: JSON.stringify(device.permissions || []),
+							is_active: device.is_active,
+						};
+						this.showDeviceModal = true;
+					},
+
+					openLinkModal(device) {
+						this.selectedDevice = device;
+						this.linkUserId = "";
+						this.showLinkModal = true;
+					},
+
+					resetUserForm() {
+						this.userForm = {
+							username: "",
+							permissions: '["login"]',
+							is_active: true,
+						};
+					},
+
+					resetDeviceForm() {
+						this.deviceForm = {
+							name: "",
+							permissions: "[]",
+							is_active: true,
+						};
+					},
+				};
+			}
+		</script>
+	</body>
+</html>

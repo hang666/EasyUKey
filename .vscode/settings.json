@@ -1,0 +1,6 @@
+{
+	"commentTranslate.hover.enabled": false,
+	"makefile.configureOnOpen": false,
+	"go.formatTool": "gofumpt",
+	"editor.formatOnSave": true
+}

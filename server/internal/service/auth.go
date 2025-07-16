@@ -1,0 +1,349 @@
+package service
+
+import (
+	"fmt"
+	"strings"
+	"time"
+
+	"github.com/hang666/EasyUKey/server/internal/global"
+	"github.com/hang666/EasyUKey/server/internal/model/entity"
+	"github.com/hang666/EasyUKey/server/internal/model/request"
+	"github.com/hang666/EasyUKey/shared/pkg/errors"
+	"github.com/hang666/EasyUKey/shared/pkg/identity"
+	"github.com/hang666/EasyUKey/shared/pkg/logger"
+	"github.com/hang666/EasyUKey/shared/pkg/messages"
+
+	"github.com/google/uuid"
+	"gorm.io/gorm"
+)
+
+// ValidateAPIKey 验证API密钥
+func ValidateAPIKey(apiKey string) (*entity.APIKey, error) {
+	var key entity.APIKey
+	result := global.DB.Where("api_key = ? AND is_active = ?", apiKey, true).First(&key)
+	if result.Error != nil {
+		if result.Error == gorm.ErrRecordNotFound {
+			return nil, errors.ErrAPIKeyInvalid
+		}
+		return nil, fmt.Errorf("查询API密钥失败: %w", result.Error)
+	}
+
+	// 检查过期时间
+	if key.ExpiresAt != nil && key.ExpiresAt.Before(time.Now()) {
+		return nil, errors.ErrAPIKeyInvalid
+	}
+
+	return &key, nil
+}
+
+// ValidateAuthKey 验证认证密钥
+func ValidateAuthKey(authKey string, deviceID uint, challenge string) (*entity.Device, error) {
+	// 查找设备信息
+	var device entity.Device
+	result := global.DB.Where("id = ?", deviceID).First(&device)
+	if result.Error != nil {
+		if result.Error == gorm.ErrRecordNotFound {
+			return nil, errors.ErrDeviceNotFound
+		}
+		return nil, fmt.Errorf("查询设备失败: %w", result.Error)
+	}
+
+	// 检查设备是否激活
+	if !device.IsActive {
+		return nil, errors.ErrAuthDeviceInactive
+	}
+
+	// 解析认证密钥格式: {challenge}:_:{onceKey}:_:{totpCode}:_:{serialNumber}:_:{volumeSerialNumber}
+	parts := strings.Split(authKey, ":_:")
+	if len(parts) != 5 {
+		return nil, errors.ErrAuthInvalidKey
+	}
+
+	receivedChallenge := parts[0]
+	receivedOnceKey := parts[1]
+	receivedTOTPCode := parts[2]
+	receivedSerialNumber := parts[3]
+	receivedVolumeSerial := parts[4]
+
+	// 验证挑战码
+	if receivedChallenge != challenge {
+		return nil, errors.ErrAuthChallengeInvalid
+	}
+
+	// 验证设备序列号
+	if receivedSerialNumber != device.SerialNumber || receivedVolumeSerial != device.VolumeSerialNumber {
+		return nil, errors.ErrAuthSerialMismatch
+	}
+
+	// 验证OnceKey
+	if receivedOnceKey != device.OnceKey {
+		return nil, errors.ErrAuthOnceKeyMismatch
+	}
+
+	// 验证TOTP代码
+	totpConfig, err := identity.ParseTOTPURI(device.TOTPSecret)
+	if err != nil {
+		return nil, fmt.Errorf("解析TOTP密钥失败: %w", err)
+	}
+
+	isValidTOTP, err := identity.VerifyTOTPCode(totpConfig, receivedTOTPCode, time.Now())
+	if err != nil {
+		return nil, fmt.Errorf("验证TOTP验证码失败: %w", err)
+	}
+
+	if !isValidTOTP {
+		return nil, errors.ErrAuthTOTPInvalid
+	}
+
+	return &device, nil
+}
+
+// ProcessAuthResponse 处理认证响应
+func ProcessAuthResponse(sessionID string, authResp *messages.AuthResponseMessage) error {
+	// 查找认证会话
+	var session entity.AuthSession
+	result := global.DB.Where("id = ?", sessionID).First(&session)
+	if result.Error != nil {
+		if result.Error == gorm.ErrRecordNotFound {
+			return errors.ErrSessionNotFound
+		}
+		return fmt.Errorf("查询认证会话失败: %w", result.Error)
+	}
+
+	// 检查会话状态
+	if session.Status != entity.AuthStatusPending {
+		return fmt.Errorf("认证会话状态无效: %s", session.Status)
+	}
+
+	// 检查是否过期
+	if session.ExpiresAt.Before(time.Now()) {
+		// 更新会话状态为过期
+		global.DB.Model(&session).Updates(map[string]interface{}{
+			"status": entity.AuthStatusExpired,
+		})
+		return errors.ErrSessionExpired
+	}
+
+	// 首先验证设备和密钥（无论成功还是失败都需要验证）
+	var device entity.Device
+	deviceResult := global.DB.Where("serial_number = ? AND volume_serial_number = ?",
+		authResp.SerialNumber, authResp.VolumeSerialNumber).First(&device)
+
+	if deviceResult.Error != nil {
+		logger.Logger.Error("认证响应中的设备未找到",
+			"session_id", sessionID,
+			"serial_number", authResp.SerialNumber,
+			"volume_serial_number", authResp.VolumeSerialNumber)
+
+		return fmt.Errorf("设备未找到")
+	}
+
+	// 验证auth_key
+	validDevice, err := ValidateAuthKey(authResp.AuthKey, device.ID, session.Challenge)
+	if err != nil {
+		logger.Logger.Error("认证密钥验证失败",
+			"session_id", sessionID,
+			"device_id", device.ID,
+			"error", err.Error())
+
+		// 在密钥验证失败时也记录失败状态
+		updates := map[string]interface{}{
+			"responding_device_id": &device.ID,
+			"status":               entity.AuthStatusFailed,
+			"result":               entity.AuthResultFailure,
+		}
+		global.DB.Model(&session).Updates(updates) // 尝试更新，忽略错误
+
+		return fmt.Errorf("认证密钥验证失败: %w", err)
+	}
+
+	// 验证设备是否具有执行此操作的权限
+	if session.Action != "" {
+		canPerformAction := false
+		for _, p := range validDevice.Permissions {
+			if p == session.Action || p == "*" {
+				canPerformAction = true
+				break
+			}
+		}
+
+		if !canPerformAction {
+			logger.Logger.Warn("设备权限不足，认证失败",
+				"session_id", sessionID,
+				"device_id", validDevice.ID,
+				"required_action", session.Action,
+				"device_permissions", validDevice.Permissions)
+
+			// 更新会话状态为失败并返回错误
+			updates := map[string]interface{}{
+				"responding_device_id": &validDevice.ID,
+				"status":               entity.AuthStatusFailed,
+				"result":               entity.AuthResultFailure,
+			}
+			if err := global.DB.Model(&session).Updates(updates).Error; err != nil {
+				return fmt.Errorf("更新认证会话失败: %w", err)
+			}
+			return fmt.Errorf("设备权限与请求的操作不匹配")
+		}
+	}
+
+	// 初始化更新数据
+	updates := map[string]interface{}{
+		"responding_device_id": &validDevice.ID,
+	}
+
+	if authResp.Success {
+		// 认证成功
+		updates["result"] = entity.AuthResultSuccess
+		updates["status"] = entity.AuthStatusCompleted
+
+		logger.Logger.Info("认证成功",
+			"session_id", sessionID,
+			"user_id", session.UserID,
+			"device_id", validDevice.ID,
+			"serial_number", validDevice.SerialNumber)
+	} else {
+		// 认证失败，区分用户拒绝和其他失败情况
+		updates["result"] = entity.AuthResultFailure
+
+		if authResp.Error == errors.ErrUserRejected.Error() {
+			updates["status"] = entity.AuthStatusRejected
+			logger.Logger.Info("用户拒绝认证",
+				"session_id", sessionID,
+				"user_id", session.UserID,
+				"device_id", validDevice.ID,
+				"serial_number", validDevice.SerialNumber)
+		} else {
+			updates["status"] = entity.AuthStatusFailed
+			logger.Logger.Info("认证失败",
+				"session_id", sessionID,
+				"user_id", session.UserID,
+				"device_id", validDevice.ID,
+				"error", authResp.Error)
+		}
+	}
+
+	// 更新数据库
+	if err := global.DB.Model(&session).Updates(updates).Error; err != nil {
+		return fmt.Errorf("更新认证会话失败: %w", err)
+	}
+
+	return nil
+}
+
+// StartAuth 发起用户认证
+func StartAuth(req *request.AuthRequest) (*entity.AuthSession, error) {
+	// 查找用户
+	var user entity.User
+	result := global.DB.Where("username = ? AND is_active = ?", req.UserID, true).First(&user)
+	if result.Error != nil {
+		if result.Error == gorm.ErrRecordNotFound {
+			return nil, errors.ErrUserNotFound
+		}
+		return nil, fmt.Errorf("查询用户失败: %w", result.Error)
+	}
+
+	// 查找用户所有激活的在线设备
+	var onlineDevices []entity.Device
+	err := global.DB.Where("user_id = ? AND is_active = ? AND is_online = ?", user.ID, true, true).Find(&onlineDevices).Error
+	if err != nil {
+		return nil, fmt.Errorf("查询在线设备失败: %w", err)
+	}
+
+	if len(onlineDevices) == 0 {
+		return nil, errors.ErrUserNotOnline
+	}
+
+	// 如果请求指定了action，检查是否有设备具备相应权限
+	if req.Action != "" {
+		canPerformAction := false
+		for _, device := range onlineDevices {
+			for _, p := range device.Permissions {
+				if p == req.Action || p == "*" {
+					canPerformAction = true
+					break
+				}
+			}
+			if canPerformAction {
+				break
+			}
+		}
+		if !canPerformAction {
+			return nil, errors.ErrPermissionDenied
+		}
+	}
+
+	// 生成会话ID
+	sessionID := uuid.New().String()
+
+	// 设置超时时间
+	timeout := time.Duration(req.Timeout) * time.Second
+	if timeout == 0 {
+		timeout = 5 * time.Minute // 默认5分钟
+	}
+	expiresAt := time.Now().Add(timeout)
+
+	// 创建认证会话
+	session := entity.AuthSession{
+		ID:        sessionID,
+		UserID:    user.ID,
+		Challenge: req.Challenge,
+		Action:    req.Action,
+		Status:    entity.AuthStatusPending,
+		ExpiresAt: expiresAt,
+	}
+
+	if err := global.DB.Create(&session).Error; err != nil {
+		return nil, fmt.Errorf("创建认证会话失败: %w", err)
+	}
+
+	// 发送WebSocket消息给用户
+	authMsg := messages.AuthRequestMessage{
+		RequestID: sessionID,
+		UserID:    req.UserID,
+		Challenge: req.Challenge,
+		Action:    req.Action,
+		Message:   req.Message,
+		Timeout:   req.Timeout,
+	}
+
+	msgData, err := SendWSMessage("auth_request", authMsg)
+	if err != nil {
+		logger.Logger.Error("序列化认证消息失败", "error", err)
+		return nil, fmt.Errorf("发送认证请求失败")
+	}
+
+	if hub := GetWSHub(); hub != nil {
+		if err := hub.SendToUser(user.ID, msgData); err != nil {
+			logger.Logger.Error("发送WebSocket消息失败", "error", err, "user_id", user.ID)
+			return nil, fmt.Errorf("发送认证请求失败")
+		}
+	}
+
+	logger.Logger.Info("发起用户认证",
+		"session_id", sessionID,
+		"user_id", user.ID,
+		"username", req.UserID)
+
+	return &session, nil
+}
+
+// VerifyAuth 验证认证结果
+func VerifyAuth(req *request.VerifyAuthRequest) (*entity.AuthSession, error) {
+	// 查找认证会话
+	var session entity.AuthSession
+	result := global.DB.Where("id = ?", req.SessionID).First(&session)
+	if result.Error != nil {
+		if result.Error == gorm.ErrRecordNotFound {
+			return nil, errors.ErrSessionNotFound
+		}
+		return nil, fmt.Errorf("查询认证会话失败: %w", result.Error)
+	}
+
+	// 检查会话状态
+	if session.ExpiresAt.Before(time.Now()) {
+		return nil, errors.ErrSessionExpired
+	}
+
+	return &session, nil
+}
