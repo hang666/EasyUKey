@@ -96,3 +96,33 @@ type PongMessage struct {
 type ForceLogoutMessage struct {
 	Message string `json:"message"`
 }
+
+// KeyExchangeRequestMessage 密钥交换请求消息
+type KeyExchangeRequestMessage struct {
+	PublicKey string `json:"public_key"` // Base64编码的客户端公钥
+}
+
+// KeyExchangeResponseMessage 密钥交换响应消息
+type KeyExchangeResponseMessage struct {
+	PublicKey string `json:"public_key"` // Base64编码的服务端公钥
+	Success   bool   `json:"success"`
+	Error     string `json:"error,omitempty"`
+}
+
+// EncryptedMessage 加密消息格式
+type EncryptedMessage struct {
+	Payload string `json:"payload"` // Base64编码的加密数据
+	Nonce   string `json:"nonce"`   // Base64编码的nonce
+}
+
+// HandshakeStatus 握手状态
+type HandshakeStatus int
+
+const (
+	// HandshakeStatusPending 等待握手
+	HandshakeStatusPending HandshakeStatus = iota
+	// HandshakeStatusCompleted 握手完成
+	HandshakeStatusCompleted
+	// HandshakeStatusFailed 握手失败
+	HandshakeStatusFailed
+)

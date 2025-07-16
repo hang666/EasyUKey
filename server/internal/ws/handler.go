@@ -22,10 +22,11 @@ func HandleWebSocket(c echo.Context) error {
 	}
 
 	client := &Client{
-		Conn:        conn,
-		Send:        make(chan []byte, config.GlobalConfig.WebSocket.SendChannelBuffer),
-		ConnectedAt: time.Now(),
-		LastPongAt:  time.Now(),
+		Conn:            conn,
+		Send:            make(chan []byte, config.GlobalConfig.WebSocket.SendChannelBuffer),
+		ConnectedAt:     time.Now(),
+		LastPongAt:      time.Now(),
+		HandshakeStatus: messages.HandshakeStatusPending,
 	}
 
 	logger.Logger.Info("新的WebSocket连接", "remote_addr", conn.RemoteAddr().String())

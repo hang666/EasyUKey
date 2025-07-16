@@ -221,3 +221,94 @@ func handleForceLogout(message messages.WSMessage) {
 	logger.Logger.Info("设备被强制下线", "message", forceLogoutMsg.Message)
 	os.Exit(0)
 }
+
+// handleKeyExchangeResponse 处理密钥交换响应
+func handleKeyExchangeResponse(message messages.WSMessage) {
+	logger.Logger.Info("收到密钥交换响应")
+
+	// 解析密钥交换响应数据
+	dataBytes, err := json.Marshal(message.Data)
+	if err != nil {
+		logger.Logger.Error("解析密钥交换响应数据失败", "error", err)
+		handshakeStatus = messages.HandshakeStatusFailed
+		return
+	}
+
+	var keyExchResp messages.KeyExchangeResponseMessage
+	if err := json.Unmarshal(dataBytes, &keyExchResp); err != nil {
+		logger.Logger.Error("反序列化密钥交换响应失败", "error", err)
+		handshakeStatus = messages.HandshakeStatusFailed
+		return
+	}
+
+	if !keyExchResp.Success {
+		logger.Logger.Error("服务端密钥交换失败", "error", keyExchResp.Error)
+		handshakeStatus = messages.HandshakeStatusFailed
+		return
+	}
+
+	// 计算共享密钥
+	if err := keyExchange.ComputeSharedKey(keyExchResp.PublicKey); err != nil {
+		logger.Logger.Error("计算共享密钥失败", "error", err)
+		handshakeStatus = messages.HandshakeStatusFailed
+		return
+	}
+
+	// 创建加密器
+	enc, err := keyExchange.CreateEncryptor()
+	if err != nil {
+		logger.Logger.Error("创建加密器失败", "error", err)
+		handshakeStatus = messages.HandshakeStatusFailed
+		return
+	}
+
+	// 更新全局状态
+	encryptor = enc
+	handshakeStatus = messages.HandshakeStatusCompleted
+
+	logger.Logger.Info("客户端密钥交换完成")
+}
+
+// handleEncryptedMessage 处理加密消息
+func handleEncryptedMessage(message messages.WSMessage) {
+	// 检查握手状态
+	if handshakeStatus != messages.HandshakeStatusCompleted {
+		logger.Logger.Error("收到加密消息但握手未完成")
+		return
+	}
+
+	if encryptor == nil {
+		logger.Logger.Error("收到加密消息但加密器未初始化")
+		return
+	}
+
+	// 解析加密消息数据
+	dataBytes, err := json.Marshal(message.Data)
+	if err != nil {
+		logger.Logger.Error("解析加密消息数据失败", "error", err)
+		return
+	}
+
+	var encryptedMsg messages.EncryptedMessage
+	if err := json.Unmarshal(dataBytes, &encryptedMsg); err != nil {
+		logger.Logger.Error("反序列化加密消息失败", "error", err)
+		return
+	}
+
+	// 解密消息
+	decryptedData, err := encryptor.DecryptMessage(encryptedMsg.Payload, encryptedMsg.Nonce)
+	if err != nil {
+		logger.Logger.Error("解密消息失败", "error", err)
+		return
+	}
+
+	// 解析解密后的消息
+	var decryptedMsg messages.WSMessage
+	if err := json.Unmarshal(decryptedData, &decryptedMsg); err != nil {
+		logger.Logger.Error("解析解密后的消息失败", "error", err)
+		return
+	}
+
+	// 递归处理解密后的消息
+	dispatchMessage(decryptedMsg)
+}

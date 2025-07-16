@@ -34,12 +34,12 @@ websocket:
   ping_period: "30s" # ping发送周期
 
   # 消息配置
-  max_message_size: 512 # 最大消息大小（字节）
+  max_message_size: 8192 # 最大消息大小（字节）
 
   # 缓冲区配置
   send_channel_buffer: 256 # 发送通道缓冲区大小
-  read_buffer_size: 1024 # 读取缓冲区大小
-  write_buffer_size: 1024 # 写入缓冲区大小
+  read_buffer_size: 4096 # 读取缓冲区大小
+  write_buffer_size: 4096 # 写入缓冲区大小
 
   # 压缩配置
   enable_compression: false # 是否启用压缩

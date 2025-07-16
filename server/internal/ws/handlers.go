@@ -1,11 +1,14 @@
 package ws
 
 import (
+	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/hang666/EasyUKey/server/internal/global"
 	"github.com/hang666/EasyUKey/server/internal/service"
 	"github.com/hang666/EasyUKey/shared/pkg/errors"
+	"github.com/hang666/EasyUKey/shared/pkg/identity"
 	"github.com/hang666/EasyUKey/shared/pkg/logger"
 	"github.com/hang666/EasyUKey/shared/pkg/messages"
 	"github.com/hang666/EasyUKey/shared/pkg/wsutil"
@@ -16,14 +19,14 @@ func handleDeviceRegister(client *Client, wsMsg *messages.WSMessage) error {
 	// 验证消息
 	if err := wsutil.ValidateMessage(wsMsg); err != nil {
 		logger.Logger.Error("处理device_register消息失败", "error", err, "user_id", client.UserID, "device_id", client.DeviceID)
-		return wsutil.SendErrorToChannel(client.Send, "device_register", "validation_error", errors.ErrWSValidation.Error())
+		return sendErrorToClient(client, "device_register", "validation_error", errors.ErrWSValidation.Error())
 	}
 
 	// 解析注册消息
 	regMsg, err := wsutil.ParseMessage[messages.DeviceRegistrationMessage](wsMsg)
 	if err != nil {
 		logger.Logger.Error("处理device_register消息失败", "error", err, "user_id", client.UserID, "device_id", client.DeviceID)
-		return wsutil.SendErrorToChannel(client.Send, "device_register", "parse_error", fmt.Sprintf("解析错误: %s", err.Error()))
+		return sendErrorToClient(client, "device_register", "parse_error", fmt.Sprintf("解析错误: %s", err.Error()))
 	}
 
 	// 通过序列号查找设备
@@ -38,7 +41,7 @@ func handleDeviceRegister(client *Client, wsMsg *messages.WSMessage) error {
 
 	if result.Error != nil {
 		logger.Logger.Error("处理device_register消息失败", "error", result.Error, "user_id", client.UserID, "device_id", client.DeviceID, "serial_number", regMsg.SerialNumber, "volume_serial_number", regMsg.VolumeSerialNumber)
-		return wsutil.SendErrorToChannel(client.Send, "device_register", "device_not_found", errors.ErrDeviceNotFoundClient.Error())
+		return sendErrorToClient(client, "device_register", "device_not_found", errors.ErrDeviceNotFoundClient.Error())
 	}
 
 	// 更新客户端信息
@@ -95,7 +98,7 @@ func handleDeviceInit(client *Client, wsMsg *messages.WSMessage) error {
 	}
 
 	// 发送初始化响应
-	if err := wsutil.SendMessageToChannel(client.Send, "device_init_response", initResp); err != nil {
+	if err := sendMessageToClient(client, "device_init_response", initResp); err != nil {
 		logger.Logger.Error("处理device_init_request消息失败", "error", err, "user_id", client.UserID, "device_id", client.DeviceID)
 		return err
 	}
@@ -158,7 +161,7 @@ func handleAuthResponse(client *Client, wsMsg *messages.WSMessage) error {
 				NewOnceKey: newOnceKey,
 			}
 
-			if err := wsutil.SendMessageToChannel(client.Send, "auth_success_response", successResp); err != nil {
+			if err := sendMessageToClient(client, "auth_success_response", successResp); err != nil {
 				logger.Logger.Error("处理auth_response消息失败", "error", err, "user_id", client.UserID, "device_id", client.DeviceID, "request_id", authResp.RequestID, "device_id", client.DeviceID)
 			}
 		}
@@ -233,4 +236,172 @@ func handlePong(client *Client, wsMsg *messages.WSMessage) error {
 	// 重置读取超时时间
 	client.resetReadDeadline()
 	return nil
+}
+
+// handleKeyExchangeRequest 处理密钥交换请求
+func handleKeyExchangeRequest(client *Client, wsMsg *messages.WSMessage) error {
+	// 解析密钥交换请求
+	keyExchReq, err := wsutil.ParseMessage[messages.KeyExchangeRequestMessage](wsMsg)
+	if err != nil {
+		logger.Logger.Error("解析密钥交换请求失败", "error", err, "device_id", client.DeviceID)
+		return sendErrorToClient(client, "key_exchange_response", "parse_error", "密钥交换请求解析失败")
+	}
+
+	// 创建服务端密钥交换器
+	keyExchange, err := identity.NewKeyExchange()
+	if err != nil {
+		logger.Logger.Error("创建密钥交换器失败", "error", err, "device_id", client.DeviceID)
+		return sendErrorToClient(client, "key_exchange_response", "server_error", "服务端密钥交换器创建失败")
+	}
+
+	// 计算共享密钥
+	if err := keyExchange.ComputeSharedKey(keyExchReq.PublicKey); err != nil {
+		logger.Logger.Error("计算共享密钥失败", "error", err, "device_id", client.DeviceID)
+		return sendErrorToClient(client, "key_exchange_response", "compute_error", "共享密钥计算失败")
+	}
+
+	// 创建加密器
+	encryptor, err := keyExchange.CreateEncryptor()
+	if err != nil {
+		logger.Logger.Error("创建加密器失败", "error", err, "device_id", client.DeviceID)
+		return sendErrorToClient(client, "key_exchange_response", "encryptor_error", "加密器创建失败")
+	}
+
+	// 更新客户端状态
+	client.mu.Lock()
+	client.KeyExchange = keyExchange
+	client.Encryptor = encryptor
+	client.HandshakeStatus = messages.HandshakeStatusCompleted
+	client.mu.Unlock()
+
+	// 发送密钥交换响应
+	keyExchResp := &messages.KeyExchangeResponseMessage{
+		PublicKey: keyExchange.GetPublicKeyBase64(),
+		Success:   true,
+	}
+
+	if err := wsutil.SendMessageToChannel(client.Send, "key_exchange_response", keyExchResp); err != nil {
+		logger.Logger.Error("发送密钥交换响应失败", "error", err, "device_id", client.DeviceID)
+		return err
+	}
+
+	logger.Logger.Info("密钥交换成功", "device_id", client.DeviceID)
+	return nil
+}
+
+// handleEncryptedMessage 处理加密消息
+func handleEncryptedMessage(client *Client, wsMsg *messages.WSMessage) error {
+	// 检查握手状态
+	client.mu.RLock()
+	handshakeStatus := client.HandshakeStatus
+	encryptor := client.Encryptor
+	client.mu.RUnlock()
+
+	if handshakeStatus != messages.HandshakeStatusCompleted {
+		logger.Logger.Error("收到加密消息但握手未完成", "device_id", client.DeviceID)
+		return sendErrorToClient(client, "encrypted", "handshake_error", "握手未完成")
+	}
+
+	if encryptor == nil {
+		logger.Logger.Error("收到加密消息但加密器未初始化", "device_id", client.DeviceID)
+		return sendErrorToClient(client, "encrypted", "encryptor_error", "加密器未初始化")
+	}
+
+	// 解析加密消息
+	encryptedMsg, err := wsutil.ParseMessage[messages.EncryptedMessage](wsMsg)
+	if err != nil {
+		logger.Logger.Error("解析加密消息失败", "error", err, "device_id", client.DeviceID)
+		return sendErrorToClient(client, "encrypted", "parse_error", "加密消息解析失败")
+	}
+
+	// 解密消息
+	decryptedData, err := encryptor.DecryptMessage(encryptedMsg.Payload, encryptedMsg.Nonce)
+	if err != nil {
+		logger.Logger.Error("解密消息失败", "error", err, "device_id", client.DeviceID)
+		return sendErrorToClient(client, "encrypted", "decrypt_error", "消息解密失败")
+	}
+
+	// 解析解密后的消息
+	var decryptedWSMsg messages.WSMessage
+	if err := json.Unmarshal(decryptedData, &decryptedWSMsg); err != nil {
+		logger.Logger.Error("解析解密后的消息失败", "error", err, "device_id", client.DeviceID)
+		return sendErrorToClient(client, "encrypted", "unmarshal_error", "解密后消息解析失败")
+	}
+
+	// 递归处理解密后的消息
+	return dispatchMessage(client, &decryptedWSMsg)
+}
+
+// sendEncryptedMessage 发送加密消息
+func sendEncryptedMessage(client *Client, msgType string, data interface{}) error {
+	client.mu.RLock()
+	encryptor := client.Encryptor
+	handshakeStatus := client.HandshakeStatus
+	client.mu.RUnlock()
+
+	// 检查握手状态
+	if handshakeStatus != messages.HandshakeStatusCompleted {
+		logger.Logger.Error("尝试发送加密消息但握手未完成", "device_id", client.DeviceID)
+		return fmt.Errorf("握手未完成")
+	}
+
+	if encryptor == nil {
+		logger.Logger.Error("尝试发送加密消息但加密器未初始化", "device_id", client.DeviceID)
+		return fmt.Errorf("加密器未初始化")
+	}
+
+	// 创建原始消息
+	originalMsg := &messages.WSMessage{
+		Type:      msgType,
+		Data:      data,
+		Timestamp: time.Now(),
+	}
+
+	// 序列化原始消息
+	originalData, err := json.Marshal(originalMsg)
+	if err != nil {
+		logger.Logger.Error("序列化原始消息失败", "error", err, "device_id", client.DeviceID)
+		return err
+	}
+
+	// 加密消息
+	encryptedPayload, nonce, err := encryptor.EncryptMessage(originalData)
+	if err != nil {
+		logger.Logger.Error("加密消息失败", "error", err, "device_id", client.DeviceID)
+		return err
+	}
+
+	// 创建加密消息
+	encryptedMsg := &messages.EncryptedMessage{
+		Payload: encryptedPayload,
+		Nonce:   nonce,
+	}
+
+	// 发送加密消息
+	return wsutil.SendMessageToChannel(client.Send, "encrypted", encryptedMsg)
+}
+
+// sendMessageToClient 发送消息到客户端（支持加密）
+func sendMessageToClient(client *Client, msgType string, data interface{}) error {
+	client.mu.RLock()
+	encryptor := client.Encryptor
+	handshakeStatus := client.HandshakeStatus
+	client.mu.RUnlock()
+
+	// 检查是否需要加密
+	if handshakeStatus == messages.HandshakeStatusCompleted && encryptor != nil {
+		return sendEncryptedMessage(client, msgType, data)
+	}
+
+	// 直接发送未加密消息
+	return wsutil.SendMessageToChannel(client.Send, msgType, data)
+}
+
+// sendErrorToClient 发送错误消息到客户端（支持加密）
+func sendErrorToClient(client *Client, msgType string, errorCode string, errorMsg string) error {
+	return sendMessageToClient(client, msgType, map[string]interface{}{
+		"error_code": errorCode,
+		"error":      errorMsg,
+		"success":    false,
+	})
 }

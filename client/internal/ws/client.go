@@ -8,7 +8,9 @@ import (
 	"time"
 
 	"github.com/hang666/EasyUKey/client/internal/confirmation"
+	"github.com/hang666/EasyUKey/shared/pkg/identity"
 	"github.com/hang666/EasyUKey/shared/pkg/logger"
+	"github.com/hang666/EasyUKey/shared/pkg/messages"
 	"github.com/hang666/EasyUKey/shared/pkg/wsutil"
 
 	"github.com/gorilla/websocket"
@@ -27,6 +29,11 @@ var (
 
 	serverAddr          string
 	isDeviceInitialized bool
+
+	// 加密相关
+	keyExchange     *identity.KeyExchange
+	encryptor       *identity.Encryptor
+	handshakeStatus messages.HandshakeStatus
 
 	errNotConnected       = errors.New("websocket is not connected")
 	errDeviceNotAvailable = errors.New("device information not available")
@@ -52,7 +59,37 @@ func Connect() error {
 	}
 
 	setConnected(true)
+	handshakeStatus = messages.HandshakeStatusPending
 	logger.Logger.Info("WebSocket连接成功")
+
+	// 启动消息监听
+	go processMessages()
+
+	// 启动心跳
+	go heartbeat()
+
+	// 首先进行密钥协商
+	if err := SendKeyExchangeRequest(); err != nil {
+		logger.Logger.Error("发送密钥协商请求失败", "error", err)
+		return err
+	}
+
+	// 等待密钥协商完成
+	for i := 0; i < 30; i++ { // 最多等待30秒
+		if handshakeStatus == messages.HandshakeStatusCompleted {
+			break
+		}
+		if handshakeStatus == messages.HandshakeStatusFailed {
+			return fmt.Errorf("密钥协商失败")
+		}
+		time.Sleep(1 * time.Second)
+	}
+
+	if handshakeStatus != messages.HandshakeStatusCompleted {
+		return fmt.Errorf("密钥协商超时")
+	}
+
+	logger.Logger.Info("密钥协商完成，发送设备请求")
 
 	// 根据设备初始化状态发送对应请求
 	if !isDeviceInitialized {
@@ -70,12 +107,6 @@ func Connect() error {
 		logger.Logger.Error("发送设备请求失败", "error", err)
 		os.Exit(1)
 	}
-
-	// 启动消息监听
-	go processMessages()
-
-	// 启动心跳
-	go heartbeat()
 
 	return nil
 }

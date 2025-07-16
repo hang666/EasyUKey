@@ -1,7 +1,11 @@
 package ws
 
 import (
+	"encoding/json"
+	"time"
+
 	"github.com/hang666/EasyUKey/client/internal/device"
+	"github.com/hang666/EasyUKey/shared/pkg/identity"
 	"github.com/hang666/EasyUKey/shared/pkg/logger"
 	"github.com/hang666/EasyUKey/shared/pkg/messages"
 	"github.com/hang666/EasyUKey/shared/pkg/wsutil"
@@ -15,7 +19,50 @@ func sendWSMessage(msgType string, data interface{}) error {
 	if conn == nil {
 		return errNotConnected
 	}
+
+	// 检查是否需要加密
+	if handshakeStatus == messages.HandshakeStatusCompleted && encryptor != nil {
+		return sendEncryptedMessage(msgType, data)
+	}
+
 	return wsutil.SendMessage(conn, msgType, data)
+}
+
+// sendEncryptedMessage 发送加密消息
+func sendEncryptedMessage(msgType string, data interface{}) error {
+	if encryptor == nil {
+		return errNotConnected
+	}
+
+	// 创建原始消息
+	originalMsg := &messages.WSMessage{
+		Type:      msgType,
+		Data:      data,
+		Timestamp: time.Now(),
+	}
+
+	// 序列化原始消息
+	originalData, err := json.Marshal(originalMsg)
+	if err != nil {
+		logger.Logger.Error("序列化原始消息失败", "error", err)
+		return err
+	}
+
+	// 加密消息
+	encryptedPayload, nonce, err := encryptor.EncryptMessage(originalData)
+	if err != nil {
+		logger.Logger.Error("加密消息失败", "error", err)
+		return err
+	}
+
+	// 创建加密消息
+	encryptedMsg := &messages.EncryptedMessage{
+		Payload: encryptedPayload,
+		Nonce:   nonce,
+	}
+
+	// 直接发送加密消息（不再次加密）
+	return wsutil.SendMessage(conn, "encrypted", encryptedMsg)
 }
 
 // SendDeviceRegistration 发送设备注册消息
@@ -112,4 +159,31 @@ func SendDeviceStatusResponse(status string, serialNumber string, volumeSerialNu
 	if err := sendWSMessage("device_status_response", deviceStatus); err != nil {
 		logger.Logger.Error("发送设备状态响应失败", "error", err)
 	}
+}
+
+// SendKeyExchangeRequest 发送密钥交换请求
+func SendKeyExchangeRequest() error {
+	// 创建密钥交换器
+	kx, err := identity.NewKeyExchange()
+	if err != nil {
+		logger.Logger.Error("创建密钥交换器失败", "error", err)
+		return err
+	}
+
+	// 保存密钥交换器到全局变量
+	keyExchange = kx
+
+	// 创建密钥交换请求
+	keyExchReq := &messages.KeyExchangeRequestMessage{
+		PublicKey: kx.GetPublicKeyBase64(),
+	}
+
+	logger.Logger.Info("发送密钥交换请求")
+	// 密钥交换请求不能加密，必须直接发送
+	mu.Lock()
+	defer mu.Unlock()
+	if conn == nil {
+		return errNotConnected
+	}
+	return wsutil.SendMessage(conn, "key_exchange_request", keyExchReq)
 }

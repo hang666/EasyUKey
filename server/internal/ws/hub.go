@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/hang666/EasyUKey/server/internal/config"
+	"github.com/hang666/EasyUKey/shared/pkg/identity"
 	"github.com/hang666/EasyUKey/shared/pkg/logger"
 	"github.com/hang666/EasyUKey/shared/pkg/messages"
 
@@ -30,6 +31,11 @@ type Client struct {
 	IsRegistered bool
 	ConnectedAt  time.Time
 	LastPongAt   time.Time
+
+	// 加密相关
+	KeyExchange     *identity.KeyExchange
+	Encryptor       *identity.Encryptor
+	HandshakeStatus messages.HandshakeStatus
 
 	// 锁
 	mu sync.RWMutex
@@ -281,6 +287,25 @@ func (h *Hub) SendToUser(userID uint, message []byte) error {
 		return fmt.Errorf("用户 %d 未在线", userID)
 	}
 
+	// 检查是否需要加密
+	client.mu.RLock()
+	encryptor := client.Encryptor
+	handshakeStatus := client.HandshakeStatus
+	client.mu.RUnlock()
+
+	if handshakeStatus == messages.HandshakeStatusCompleted && encryptor != nil {
+		// 需要加密发送
+		// 先解析原始消息
+		var wsMsg messages.WSMessage
+		if err := json.Unmarshal(message, &wsMsg); err != nil {
+			return fmt.Errorf("解析消息失败: %v", err)
+		}
+
+		// 使用加密发送
+		return sendEncryptedMessage(client, wsMsg.Type, wsMsg.Data)
+	}
+
+	// 直接发送未加密消息
 	select {
 	case client.Send <- message:
 		return nil
@@ -299,6 +324,25 @@ func (h *Hub) SendToDevice(deviceID uint, message []byte) error {
 		return fmt.Errorf("设备 %d 未在线", deviceID)
 	}
 
+	// 检查是否需要加密
+	client.mu.RLock()
+	encryptor := client.Encryptor
+	handshakeStatus := client.HandshakeStatus
+	client.mu.RUnlock()
+
+	if handshakeStatus == messages.HandshakeStatusCompleted && encryptor != nil {
+		// 需要加密发送
+		// 先解析原始消息
+		var wsMsg messages.WSMessage
+		if err := json.Unmarshal(message, &wsMsg); err != nil {
+			return fmt.Errorf("解析消息失败: %v", err)
+		}
+
+		// 使用加密发送
+		return sendEncryptedMessage(client, wsMsg.Type, wsMsg.Data)
+	}
+
+	// 直接发送未加密消息
 	select {
 	case client.Send <- message:
 		return nil

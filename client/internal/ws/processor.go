@@ -50,6 +50,10 @@ func processMessages() {
 // dispatchMessage routes a message to its corresponding handler.
 func dispatchMessage(message messages.WSMessage) {
 	switch message.Type {
+	case "key_exchange_response":
+		handleKeyExchangeResponse(message)
+	case "encrypted":
+		handleEncryptedMessage(message)
 	case "auth_request":
 		go handleAuthRequest(message) // Run in a goroutine to not block the read loop
 	case "device_init_response":
