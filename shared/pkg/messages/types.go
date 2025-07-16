@@ -14,12 +14,13 @@ type WSMessage struct {
 
 // AuthRequestMessage 认证请求消息
 type AuthRequestMessage struct {
-	RequestID string `json:"request_id"`
-	UserID    string `json:"user_id"`
-	Challenge string `json:"challenge"`
-	Action    string `json:"action,omitempty"`
-	Message   string `json:"message"`
-	Timeout   int    `json:"timeout"`
+	RequestID   string `json:"request_id"`
+	UserID      string `json:"user_id"`
+	Challenge   string `json:"challenge"`
+	Action      string `json:"action,omitempty"`
+	Message     string `json:"message"`
+	Timeout     int    `json:"timeout"`
+	CallbackURL string `json:"callback_url,omitempty"` // 回调URL
 }
 
 // AuthResponseMessage 认证响应消息
@@ -126,3 +127,15 @@ const (
 	// HandshakeStatusFailed 握手失败
 	HandshakeStatusFailed
 )
+
+// CallbackRequest 回调请求数据结构
+type CallbackRequest struct {
+	SessionID string `json:"session_id"` // 认证会话ID
+	UserID    string `json:"user_id"`    // 用户唯一标识
+	Status    string `json:"status"`     // 认证结果：success/failed
+	Challenge string `json:"challenge"`  // 认证挑战码
+	Action    string `json:"action"`     // 操作权限
+	DeviceID  uint   `json:"device_id"`  // 设备ID
+	Timestamp int64  `json:"timestamp"`  // 回调时间戳
+	Signature string `json:"signature"`  // HMAC-SHA256签名
+}

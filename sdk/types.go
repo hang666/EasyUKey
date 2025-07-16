@@ -12,6 +12,18 @@ type AuthRequest struct {
 	CallbackURL string `json:"callback_url,omitempty"`
 }
 
+// CallbackRequest 回调请求数据结构
+type CallbackRequest struct {
+	SessionID string `json:"session_id"`
+	UserID    string `json:"user_id"`
+	Status    string `json:"status"`
+	Challenge string `json:"challenge"`
+	Action    string `json:"action"`
+	DeviceID  uint   `json:"device_id"`
+	Timestamp int64  `json:"timestamp"`
+	Signature string `json:"signature"`
+}
+
 // VerifyAuthRequest 验证认证请求
 type VerifyAuthRequest struct {
 	SessionID string `json:"session_id"`

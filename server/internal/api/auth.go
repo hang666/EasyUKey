@@ -3,6 +3,7 @@ package api
 import (
 	"net/http"
 
+	"github.com/hang666/EasyUKey/server/internal/model/entity"
 	"github.com/hang666/EasyUKey/server/internal/model/request"
 	"github.com/hang666/EasyUKey/server/internal/model/response"
 	"github.com/hang666/EasyUKey/server/internal/service"
@@ -27,7 +28,10 @@ func StartAuth(c echo.Context) error {
 		return errors.ErrMissingChallenge
 	}
 
-	session, err := service.StartAuth(&req)
+	// 从上下文获取API密钥信息
+	apiKey := c.Get("api_key").(*entity.APIKey)
+
+	session, err := service.StartAuth(&req, apiKey)
 	if err != nil {
 		logger.Logger.Error("发起认证失败", "error", err, "username", username)
 		return err

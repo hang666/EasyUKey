@@ -1,13 +1,17 @@
 package service
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
 	"github.com/hang666/EasyUKey/server/internal/global"
 	"github.com/hang666/EasyUKey/server/internal/model/entity"
 	"github.com/hang666/EasyUKey/server/internal/model/request"
+	"github.com/hang666/EasyUKey/shared/pkg/callback"
 	"github.com/hang666/EasyUKey/shared/pkg/errors"
 	"github.com/hang666/EasyUKey/shared/pkg/identity"
 	"github.com/hang666/EasyUKey/shared/pkg/logger"
@@ -15,6 +19,11 @@ import (
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+)
+
+const (
+	CallbackTimeout    = 10 * time.Second // 回调超时时间
+	CallbackMaxRetries = 3                // 最大重试次数
 )
 
 // ValidateAPIKey 验证API密钥
@@ -228,11 +237,16 @@ func ProcessAuthResponse(sessionID string, authResp *messages.AuthResponseMessag
 		return fmt.Errorf("更新认证会话失败: %w", err)
 	}
 
+	// 如果有回调URL，发送异步回调
+	if session.CallbackURL != "" {
+		go sendAuthCallback(&session, authResp.SerialNumber)
+	}
+
 	return nil
 }
 
 // StartAuth 发起用户认证
-func StartAuth(req *request.AuthRequest) (*entity.AuthSession, error) {
+func StartAuth(req *request.AuthRequest, apiKey *entity.APIKey) (*entity.AuthSession, error) {
 	// 查找用户
 	var user entity.User
 	result := global.DB.Where("username = ? AND is_active = ?", req.UserID, true).First(&user)
@@ -285,12 +299,14 @@ func StartAuth(req *request.AuthRequest) (*entity.AuthSession, error) {
 
 	// 创建认证会话
 	session := entity.AuthSession{
-		ID:        sessionID,
-		UserID:    user.ID,
-		Challenge: req.Challenge,
-		Action:    req.Action,
-		Status:    entity.AuthStatusPending,
-		ExpiresAt: expiresAt,
+		ID:          sessionID,
+		UserID:      user.ID,
+		APIKeyID:    apiKey.ID,
+		Challenge:   req.Challenge,
+		Action:      req.Action,
+		Status:      entity.AuthStatusPending,
+		ExpiresAt:   expiresAt,
+		CallbackURL: req.CallbackURL,
 	}
 
 	if err := global.DB.Create(&session).Error; err != nil {
@@ -326,6 +342,99 @@ func StartAuth(req *request.AuthRequest) (*entity.AuthSession, error) {
 		"username", req.UserID)
 
 	return &session, nil
+}
+
+// sendAuthCallback 发送认证回调
+func sendAuthCallback(session *entity.AuthSession, serialNumber string) {
+	// 查找对应的API密钥作为签名密钥
+	apiKey, err := getAPIKeyBySession(session)
+	if err != nil {
+		logger.Logger.Error("获取API密钥失败", "session_id", session.ID, "error", err)
+		return
+	}
+
+	// 构建回调请求
+	callbackReq := &messages.CallbackRequest{
+		SessionID: session.ID,
+		UserID:    fmt.Sprintf("%d", session.UserID),
+		Challenge: session.Challenge,
+		Action:    session.Action,
+		Timestamp: time.Now().Unix(),
+	}
+
+	// 设置状态
+	if session.Status == entity.AuthStatusCompleted && session.Result == entity.AuthResultSuccess {
+		callbackReq.Status = "success"
+	} else {
+		callbackReq.Status = "failed"
+	}
+
+	// 设置设备ID
+	if session.RespondingDeviceID != nil {
+		callbackReq.DeviceID = *session.RespondingDeviceID
+	}
+
+	// 生成签名
+	callbackReq.Signature = callback.GenerateSignature(callbackReq, apiKey)
+
+	// 发送回调，最多重试3次
+	for i := 0; i < CallbackMaxRetries; i++ {
+		if sendHTTPCallback(session.CallbackURL, callbackReq) {
+			logger.Logger.Info("回调成功", "session_id", session.ID, "url", session.CallbackURL, "retries", i)
+			return
+		}
+
+		if i < CallbackMaxRetries-1 {
+			// 递增重试间隔: 5s, 10s, 30s
+			delays := []time.Duration{5 * time.Second, 10 * time.Second, 30 * time.Second}
+			time.Sleep(delays[i])
+		}
+	}
+
+	logger.Logger.Error("回调失败，已达到最大重试次数", "session_id", session.ID, "url", session.CallbackURL)
+}
+
+// sendHTTPCallback 发送HTTP回调请求
+func sendHTTPCallback(url string, req *messages.CallbackRequest) bool {
+	data, err := json.Marshal(req)
+	if err != nil {
+		logger.Logger.Error("序列化回调请求失败", "error", err)
+		return false
+	}
+
+	httpReq, err := http.NewRequest("POST", url, bytes.NewBuffer(data))
+	if err != nil {
+		logger.Logger.Error("创建HTTP请求失败", "url", url, "error", err)
+		return false
+	}
+
+	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("User-Agent", "EasyUKey-Callback/1.0")
+
+	client := &http.Client{Timeout: CallbackTimeout}
+	resp, err := client.Do(httpReq)
+	if err != nil {
+		logger.Logger.Error("发送回调请求失败", "url", url, "error", err)
+		return false
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+		return true
+	}
+
+	logger.Logger.Error("回调请求失败", "url", url, "status_code", resp.StatusCode)
+	return false
+}
+
+// getAPIKeyBySession 通过会话获取API密钥
+func getAPIKeyBySession(session *entity.AuthSession) (string, error) {
+	var apiKey entity.APIKey
+	err := global.DB.Where("id = ?", session.APIKeyID).First(&apiKey).Error
+	if err != nil {
+		return "", fmt.Errorf("查找API密钥失败: %w", err)
+	}
+	return apiKey.APIKey, nil
 }
 
 // VerifyAuth 验证认证结果
