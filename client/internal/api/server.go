@@ -34,9 +34,13 @@ func StartHttpServer(port int, templateFS embed.FS) error {
 	}
 	e.Renderer = t
 
-	// 静态资源路由
+	// 认证相关路由
 	e.GET("/", HandleConfirmPage)
 	e.POST("/confirm", HandleConfirmAction)
+
+	// PIN设置相关路由
+	e.GET("/pin", HandlePINPage)
+	e.POST("/pin-setup", HandlePINSetup)
 
 	httpServer = e
 

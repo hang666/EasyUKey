@@ -8,6 +8,7 @@ import (
 
 	"github.com/hang666/EasyUKey/client/internal/confirmation"
 	"github.com/hang666/EasyUKey/client/internal/device"
+	"github.com/hang666/EasyUKey/client/internal/global"
 	"github.com/hang666/EasyUKey/shared/pkg/errors"
 	"github.com/hang666/EasyUKey/shared/pkg/identity"
 	"github.com/hang666/EasyUKey/shared/pkg/logger"
@@ -64,30 +65,42 @@ func handleAuthRequest(message messages.WSMessage) {
 		return
 	}
 
-	currentOnceKey, err := identity.GetOnceKeySecure()
-	if err != nil {
-		logger.Logger.Error("获取当前 OnceKey 失败", "error", err)
-		SendAuthResponse(authReq.RequestID, false, "", "", dev.SerialNumber, dev.VolumeSerialNumber, errors.ErrGetOnceKeyFailed.Error())
-		return
-	}
-
-	fullKey, err := identity.GetFullKeySecure(dev.SerialNumber, dev.VolumeSerialNumber)
-	if err != nil {
-		logger.Logger.Error("获取完整密钥失败", "error", err)
-		SendAuthResponse(authReq.RequestID, false, "", "", dev.SerialNumber, dev.VolumeSerialNumber, errors.ErrGetFullKeyFailed.Error())
-		return
-	}
-	authKey := fmt.Sprintf("%s:_:%s", authReq.Challenge, fullKey)
-
 	if !confirmResult.Confirmed {
 		logger.Logger.Info("用户拒绝认证")
-		SendAuthResponse(authReq.RequestID, false, authKey, currentOnceKey, dev.SerialNumber, dev.VolumeSerialNumber, errors.ErrUserRejected.Error())
+		SendAuthResponse(authReq.RequestID, false, "", "", dev.SerialNumber, dev.VolumeSerialNumber, errors.ErrUserRejected.Error())
 		return
 	}
 
-	// 用户确认，执行认证
-	logger.Logger.Info("用户确认认证")
+	// 用户确认，需要等待PIN输入
+	logger.Logger.Info("用户确认认证，等待PIN输入")
 
+	// 等待PIN输入
+	pin, err := global.PinManager.WaitPIN()
+	if err != nil {
+		SendAuthResponse(authReq.RequestID, false, "", "", dev.SerialNumber, dev.VolumeSerialNumber, "PIN输入超时")
+		return
+	}
+
+	// 使用PIN获取当前OnceKey
+	currentOnceKey, err := identity.GetOnceKey(pin, global.Config.EncryptKeyStr, global.SecureStoragePath)
+	if err != nil {
+		SendAuthResponse(authReq.RequestID, false, "", "", dev.SerialNumber, dev.VolumeSerialNumber, "PIN验证失败")
+		return
+	}
+
+	// 使用PIN生成完整密钥
+	fullKey, err := identity.GetFullKey(pin, global.Config.EncryptKeyStr, dev.SerialNumber, dev.VolumeSerialNumber, global.SecureStoragePath)
+	if err != nil {
+		SendAuthResponse(authReq.RequestID, false, "", "", dev.SerialNumber, dev.VolumeSerialNumber, "密钥生成失败")
+		return
+	}
+
+	authKey := fmt.Sprintf("%s:_:%s", authReq.Challenge, fullKey)
+
+	// 保存PIN以供后续更新OnceKey使用
+	global.PinManager.SendPIN(pin)
+
+	logger.Logger.Info("认证成功，发送认证响应")
 	SendAuthResponse(authReq.RequestID, true, authKey, currentOnceKey, dev.SerialNumber, dev.VolumeSerialNumber, "")
 }
 
@@ -108,14 +121,17 @@ func handleDeviceInitResponse(message messages.WSMessage) {
 
 	if !resp.Success {
 		logger.Logger.Error("设备初始化失败", "error", resp.Error, "message", resp.Message)
-		// 可能需要退出或采取其他措施
 		return
 	}
 
-	// 保存OnceKey和TOTP
-	if err := identity.SaveInitialKeys(resp.OnceKey, resp.TOTPURI); err != nil {
-		logger.Logger.Error("保存初始密钥失败", "error", err)
-		// 通知服务端保存失败
+	// 等待PIN输入
+	pin, err := global.PinManager.WaitPIN()
+	if err != nil {
+		return
+	}
+
+	// 使用PIN保存初始密钥
+	if err := identity.SaveInitialKeys(pin, global.Config.EncryptKeyStr, resp.OnceKey, resp.TOTPURI, global.SecureStoragePath); err != nil {
 		return
 	}
 
@@ -144,11 +160,17 @@ func handleAuthSuccessResponse(message messages.WSMessage) {
 		return
 	}
 
-	// 更新OnceKey
-	err = identity.SetOnceKeySecure(resp.NewOnceKey)
+	// 等待PIN输入（复用之前保存的PIN）
+	pin, err := global.PinManager.WaitPIN()
 	if err != nil {
-		logger.Logger.Error("更新OnceKey失败", "error", err)
-		SendOnceKeyUpdateConfirm(resp.RequestID, false, "客户端保存新Key失败: "+err.Error())
+		SendOnceKeyUpdateConfirm(resp.RequestID, false, "PIN获取失败")
+		return
+	}
+
+	// 使用PIN更新OnceKey
+	err = identity.SetOnceKey(pin, global.Config.EncryptKeyStr, resp.NewOnceKey, global.SecureStoragePath)
+	if err != nil {
+		SendOnceKeyUpdateConfirm(resp.RequestID, false, "保存新Key失败")
 		return
 	}
 

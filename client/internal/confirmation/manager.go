@@ -69,3 +69,9 @@ func SendConfirmation(confirmation AuthConfirmation) {
 		// 通道阻塞或关闭，可能认证已超时
 	}
 }
+
+// ShowPINSetupPage 显示PIN设置页面
+func ShowPINSetupPage() error {
+	url := fmt.Sprintf("http://localhost:%d/pin", serverPort)
+	return OpenBrowser(url)
+}

@@ -7,126 +7,130 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 )
 
-const (
-	// EncryptedFileExt 加密文件扩展名
-	EncryptedFileExt = ".enc"
-)
+const EncryptedFileExt = ".enc"
 
-// SecureStorage 安全存储管理器
-type SecureStorage struct {
-	encryptor *Encryptor
-	basePath  string
-}
-
-// NewSecureStorage 创建安全存储实例
-func NewSecureStorage(password string, basePath string) (*SecureStorage, error) {
-	if password == "" {
-		return nil, errors.New("密码不能为空")
+// Store 使用PIN+EncryptKey加密并存储数据
+func Store(pin, encryptKey, keyType string, data []byte, basePath string) error {
+	if pin == "" || encryptKey == "" || len(data) == 0 {
+		return errors.New("PIN、EncryptKey和数据不能为空")
 	}
 
-	// 确保目录存在
-	if err := os.MkdirAll(basePath, 0o700); err != nil {
-		return nil, fmt.Errorf("创建存储目录失败: %w", err)
-	}
+	os.MkdirAll(basePath, 0o700)
 
-	// 使用MD5哈希作为加密密钥（与现有代码保持一致）
-	key := []byte(md5Hash(password))
-
-	// 创建加密器
+	key := []byte(md5Hash(pin + "_" + encryptKey))
 	encryptor, err := NewEncryptor(key)
 	if err != nil {
-		return nil, fmt.Errorf("创建加密器失败: %w", err)
+		return err
 	}
 
-	return &SecureStorage{
-		encryptor: encryptor,
-		basePath:  basePath,
-	}, nil
-}
-
-// StoreKey 安全存储密钥
-func (s *SecureStorage) StoreKey(keyType string, data []byte) error {
-	if len(data) == 0 {
-		return errors.New("数据不能为空")
-	}
-
-	// 使用现有的加密器加密数据
-	encrypted, err := s.encryptor.Encrypt(data)
+	encrypted, err := encryptor.Encrypt(data)
 	if err != nil {
-		return fmt.Errorf("加密数据失败: %w", err)
+		return err
 	}
 
-	// 写入文件
-	filename := s.getKeyFilePath(keyType)
-	if err := os.WriteFile(filename, encrypted, 0o600); err != nil {
-		return fmt.Errorf("写入加密文件失败: %w", err)
-	}
-
-	return nil
+	filename := getKeyFilePath(keyType, basePath)
+	return os.WriteFile(filename, encrypted, 0o600)
 }
 
-// LoadKey 安全读取密钥
-func (s *SecureStorage) LoadKey(keyType string) ([]byte, error) {
-	filename := s.getKeyFilePath(keyType)
+// Load 使用PIN+EncryptKey解密并加载数据
+func Load(pin, encryptKey, keyType string, basePath string) ([]byte, error) {
+	if pin == "" || encryptKey == "" {
+		return nil, errors.New("PIN和EncryptKey不能为空")
+	}
 
-	// 读取加密文件
+	filename := getKeyFilePath(keyType, basePath)
 	encrypted, err := os.ReadFile(filename)
 	if err != nil {
-		return nil, fmt.Errorf("读取加密文件失败: %w", err)
+		return nil, err
 	}
 
-	// 使用现有的解密器解密数据
-	decrypted, err := s.encryptor.Decrypt(encrypted)
+	key := []byte(md5Hash(pin + "_" + encryptKey))
+	encryptor, err := NewEncryptor(key)
 	if err != nil {
-		return nil, fmt.Errorf("解密数据失败: %w", err)
+		return nil, err
 	}
 
-	return decrypted, nil
+	return encryptor.Decrypt(encrypted)
 }
 
 // KeyExists 检查密钥是否存在
-func (s *SecureStorage) KeyExists(keyType string) bool {
-	filename := s.getKeyFilePath(keyType)
+func KeyExists(keyType string, basePath string) bool {
+	filename := getKeyFilePath(keyType, basePath)
 	_, err := os.Stat(filename)
 	return err == nil
 }
 
-// DeleteKey 删除密钥
-func (s *SecureStorage) DeleteKey(keyType string) error {
-	filename := s.getKeyFilePath(keyType)
-	if err := os.Remove(filename); err != nil && !os.IsNotExist(err) {
-		return fmt.Errorf("删除密钥文件失败: %w", err)
-	}
-	return nil
+// SetTOTPSecret 存储TOTP密钥
+func SetTOTPSecret(pin, encryptKey, secret, basePath string) error {
+	return Store(pin, encryptKey, "totp", []byte(secret), basePath)
 }
 
-// ListKeys 列出所有存储的密钥类型
-func (s *SecureStorage) ListKeys() ([]string, error) {
-	files, err := os.ReadDir(s.basePath)
+// SetOnceKey 存储一次性密钥
+func SetOnceKey(pin, encryptKey, key, basePath string) error {
+	return Store(pin, encryptKey, "once", []byte(key), basePath)
+}
+
+// GetTOTPSecret 获取TOTP密钥
+func GetTOTPSecret(pin, encryptKey, basePath string) (string, error) {
+	data, err := Load(pin, encryptKey, "totp", basePath)
 	if err != nil {
-		return nil, fmt.Errorf("读取存储目录失败: %w", err)
+		return "", err
 	}
-
-	var keys []string
-	for _, file := range files {
-		if file.IsDir() {
-			continue
-		}
-
-		name := file.Name()
-		if filepath.Ext(name) == EncryptedFileExt {
-			keyType := name[:len(name)-len(EncryptedFileExt)]
-			keys = append(keys, keyType)
-		}
-	}
-
-	return keys, nil
+	return string(data), nil
 }
 
-// getKeyFilePath 获取密钥文件路径，按照现有命名规则
-func (s *SecureStorage) getKeyFilePath(keyType string) string {
+// GetOnceKey 获取一次性密钥
+func GetOnceKey(pin, encryptKey, basePath string) (string, error) {
+	data, err := Load(pin, encryptKey, "once", basePath)
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
+}
+
+// GetFullKey 生成完整认证密钥
+func GetFullKey(pin, encryptKey, serialNumber, volumeSerialNumber, basePath string) (string, error) {
+	onceKey, err := GetOnceKey(pin, encryptKey, basePath)
+	if err != nil {
+		return "", err
+	}
+
+	totpURI, err := GetTOTPSecret(pin, encryptKey, basePath)
+	if err != nil {
+		return "", err
+	}
+
+	totpConfig, err := ParseTOTPURI(totpURI)
+	if err != nil {
+		return "", err
+	}
+
+	totpCode, err := GenerateTOTPCode(totpConfig, time.Now())
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("%s:_:%s:_:%s:_:%s", onceKey, totpCode, serialNumber, volumeSerialNumber), nil
+}
+
+// SaveInitialKeys 保存初始化密钥
+func SaveInitialKeys(pin, encryptKey, onceKey, totpURI, basePath string) error {
+	if err := SetOnceKey(pin, encryptKey, onceKey, basePath); err != nil {
+		return err
+	}
+	return SetTOTPSecret(pin, encryptKey, totpURI, basePath)
+}
+
+// IsInitialized 检查设备是否已经初始化
+func IsInitialized(basePath string) bool {
+	return KeyExists("totp", basePath)
+}
+
+// getKeyFilePath 获取密钥文件路径
+func getKeyFilePath(keyType string, basePath string) string {
 	var filename string
 	switch keyType {
 	case "totp":
@@ -136,10 +140,10 @@ func (s *SecureStorage) getKeyFilePath(keyType string) string {
 	default:
 		filename = fmt.Sprintf("%s.dat%s", keyType, EncryptedFileExt)
 	}
-	return filepath.Join(s.basePath, filename)
+	return filepath.Join(basePath, filename)
 }
 
-// md5Hash 计算MD5哈希（与现有代码保持一致）
+// md5Hash 计算MD5哈希
 func md5Hash(data string) string {
 	hash := md5.New()
 	hash.Write([]byte(data))

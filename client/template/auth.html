@@ -39,6 +39,25 @@
 			[x-cloak] {
 				display: none !important;
 			}
+			.pin-input {
+				width: 3rem;
+				height: 3rem;
+				text-align: center;
+				font-size: 1.5rem;
+				font-weight: bold;
+				border: 2px solid #e5e7eb;
+				border-radius: 0.5rem;
+				outline: none;
+				transition: all 0.2s;
+			}
+			.pin-input:focus {
+				border-color: #3b82f6;
+				box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+			}
+			.pin-input.filled {
+				border-color: #10b981;
+				background-color: #f0fdf4;
+			}
 		</style>
 	</head>
 	<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
@@ -51,7 +70,7 @@
 				class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 relative overflow-hidden"
 			>
 				<!-- 认证请求视图 -->
-				<div x-show="!completed" x-cloak>
+				<div x-show="currentStep === 'auth'" x-cloak>
 					<!-- 背景装饰 -->
 					<div
 						class="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-400 to-indigo-600 rounded-full -translate-y-16 translate-x-16 opacity-10"
@@ -140,7 +159,7 @@
 							拒绝
 						</button>
 						<button
-							@click="submit('confirm')"
+							@click="requirePIN()"
 							:disabled="expired || loading"
 							class="flex-1 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 disabled:from-gray-300 disabled:to-gray-400 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 flex items-center justify-center transform hover:scale-105"
 						>
@@ -162,8 +181,85 @@
 					</div>
 				</div>
 
+				<!-- PIN输入视图 -->
+				<div x-show="currentStep === 'pin'" x-cloak>
+					<!-- 背景装饰 -->
+					<div
+						class="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-400 to-indigo-600 rounded-full -translate-y-16 translate-x-16 opacity-10"
+					></div>
+
+					<!-- 标题区域 -->
+					<div class="text-center mb-6">
+						<div class="relative inline-block mb-4">
+							<div
+								class="w-20 h-20 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center text-white text-3xl pulse-ring relative"
+							>
+								<i class="fas fa-key"></i>
+							</div>
+						</div>
+						<h1 class="text-2xl font-bold text-gray-800 mb-2">输入PIN密码</h1>
+						<p class="text-gray-600">请输入您的6位PIN密码以验证身份</p>
+					</div>
+
+					<!-- PIN输入区域 -->
+					<div class="mb-6 text-center">
+						<input
+							type="password"
+							maxlength="6"
+							inputmode="numeric"
+							pattern="[0-9]*"
+							placeholder="******"
+							class="pin-input block mx-auto"
+							x-model="pin"
+							@input="onInput"
+							autocomplete="one-time-code"
+							style="
+								letter-spacing: 0.5em;
+								text-align: center;
+								width: 12em;
+								font-size: 2em;
+							"
+						/>
+						<p class="text-sm text-gray-500 mt-2">
+							可直接粘贴或连续输入6位数字
+						</p>
+					</div>
+
+					<!-- 错误提示 -->
+					<div
+						x-show="pinErrorMessage"
+						x-transition
+						class="mb-4 p-3 bg-red-100 border border-red-200 rounded-lg text-center"
+					>
+						<p class="text-red-700 text-sm">
+							<i class="fas fa-exclamation-triangle mr-2"></i>
+							<span x-text="pinErrorMessage"></span>
+						</p>
+					</div>
+
+					<!-- 操作按钮 -->
+					<div class="flex space-x-3">
+						<button
+							@click="backToAuth()"
+							:disabled="loading"
+							class="flex-1 bg-gray-500 hover:bg-gray-600 disabled:bg-gray-300 text-white font-semibold py-3 px-6 rounded-xl transition-colors duration-200 flex items-center justify-center"
+						>
+							<i class="fas fa-arrow-left mr-2"></i>
+							返回
+						</button>
+						<button
+							@click="submitWithPIN()"
+							:disabled="!isPinComplete || loading"
+							class="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 disabled:from-gray-300 disabled:to-gray-400 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 flex items-center justify-center transform hover:scale-105"
+						>
+							<i class="fas fa-unlock mr-2"></i>
+							验证并认证
+						</button>
+					</div>
+				</div>
+
 				<!-- 结果视图 -->
-				<div x-show="completed" x-cloak class="text-center">
+				<div x-show="currentStep === 'result'" x-cloak class="text-center">
 					<div class="mb-6">
 						<div
 							class="w-20 h-20 rounded-full flex items-center justify-center text-white text-3xl mx-auto mb-4"
@@ -209,10 +305,19 @@
 					rawRequest: rawRequest,
 					expired: initialRemaining <= 0,
 					loading: false,
-					completed: false,
+					currentStep: "auth", // 'auth', 'pin', 'result'
 					resultMessage: "",
 					confirmStatus: "", // true or false
 					resultStatus: "", // 'success' or 'error'
+					pin: "",
+					pinErrorMessage: "",
+					get isPinComplete() {
+						return this.pin.length === 6;
+					},
+					onInput(e) {
+						this.pin = e.target.value.replace(/\D/g, "").slice(0, 6);
+						this.pinErrorMessage = "";
+					},
 
 					init() {
 						if (!this.expired) {
@@ -231,9 +336,34 @@
 						}, 1000);
 					},
 
-					async submit(action) {
+					// 进入PIN输入步骤
+					requirePIN() {
 						if (this.expired || this.loading) return;
+						this.currentStep = "pin";
+						// 聚焦到第一个PIN输入框
+						this.$nextTick(() => {
+							// No specific focus logic needed here as pin is a single input
+						});
+					},
+
+					// 返回认证页面
+					backToAuth() {
+						this.currentStep = "auth";
+						this.pin = ""; // Clear the pin input
+						this.pinErrorMessage = "";
+					},
+
+					// 清空PIN
+					clearPIN() {
+						this.pin = "";
+						this.pinErrorMessage = "";
+					},
+
+					// 带PIN的认证提交
+					async submitWithPIN() {
+						if (!this.isPinComplete || this.expired || this.loading) return;
 						this.loading = true;
+						this.pinErrorMessage = "";
 
 						try {
 							const response = await fetch("/confirm", {
@@ -242,14 +372,15 @@
 									"Content-Type": "application/json",
 								},
 								body: JSON.stringify({
-									action: action,
+									action: "confirm",
 									request: this.rawRequest,
+									pin: this.pin,
 								}),
 							});
 
 							const result = await response.json();
 							if (!response.ok) {
-								throw new Error(result.message || "发生未知错误");
+								throw new Error(result.message || "认证失败");
 							}
 							this.showResult(
 								result.message,
@@ -257,21 +388,57 @@
 								result.status
 							);
 						} catch (error) {
-							console.error("操作失败:", error);
-							this.showResult(
-								error.message || "操作失败，请重试",
-								false,
-								"error"
-							);
+							console.error("认证失败:", error);
+							this.pinErrorMessage = error.message || "PIN验证失败，请重试";
+							this.loading = false;
+						}
+					},
+
+					// 拒绝认证
+					async submit(action) {
+						if (action === "reject") {
+							if (this.expired || this.loading) return;
+							this.loading = true;
+
+							try {
+								const response = await fetch("/confirm", {
+									method: "POST",
+									headers: {
+										"Content-Type": "application/json",
+									},
+									body: JSON.stringify({
+										action: action,
+										request: this.rawRequest,
+									}),
+								});
+
+								const result = await response.json();
+								if (!response.ok) {
+									throw new Error(result.message || "发生未知错误");
+								}
+								this.showResult(
+									result.message,
+									result.confirmStatus,
+									result.status
+								);
+							} catch (error) {
+								console.error("操作失败:", error);
+								this.showResult(
+									error.message || "操作失败，请重试",
+									false,
+									"error"
+								);
+							}
 						}
 					},
 
 					showResult(message, confirmStatus, resultStatus) {
 						this.loading = false;
-						this.completed = true;
+						this.currentStep = "result";
 						this.resultMessage = message;
 						this.confirmStatus = confirmStatus;
 						this.resultStatus = resultStatus;
+						this.clearPIN(); // 清空PIN
 
 						setTimeout(() => {
 							window.close();

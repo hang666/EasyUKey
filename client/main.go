@@ -13,6 +13,7 @@ import (
 	"github.com/hang666/EasyUKey/client/internal/device"
 	"github.com/hang666/EasyUKey/client/internal/global"
 	"github.com/hang666/EasyUKey/client/internal/initialize"
+	"github.com/hang666/EasyUKey/client/internal/pin"
 	"github.com/hang666/EasyUKey/client/internal/ws"
 	"github.com/hang666/EasyUKey/shared/pkg/identity"
 	"github.com/hang666/EasyUKey/shared/pkg/logger"
@@ -36,12 +37,6 @@ func main() {
 		panic("客户端初始化失败: " + err.Error())
 	}
 
-	secureStoragePath := filepath.Join(global.Config.ExeDir, ".secure")
-	if err := identity.InitSecureStorage(global.Config.EncryptKeyStr, secureStoragePath); err != nil {
-		logger.Logger.Error("安全存储初始化失败", "error", err)
-		os.Exit(1)
-	}
-
 	go device.StartTimer(global.Config.ExeDir)
 
 	for device.DeviceInfo.GetDevice() == nil {
@@ -61,10 +56,16 @@ func main() {
 
 // startServices 启动各个服务
 func startServices() {
-	isInitialized := identity.IsInitialized()
+	// 设置全局安全存储路径
+	global.SecureStoragePath = filepath.Join(global.Config.ExeDir, ".secure")
+
+	isInitialized := identity.IsInitialized(global.SecureStoragePath)
 	if !isInitialized {
 		logger.Logger.Info("设备未初始化，将在连接后进行初始化")
 	}
+
+	// 初始化PIN管理器
+	global.PinManager = pin.NewPINManager()
 
 	confirmation.Init(global.Config.HTTPPort)
 	ws.Init(global.Config.ServerAddr, isInitialized)
@@ -94,6 +95,11 @@ func shutdown() {
 	device.StopTimer()
 	api.StopHttpServer()
 	ws.Disconnect()
+
+	// 关闭PIN管理器
+	if global.PinManager != nil {
+		global.PinManager.Close()
+	}
 
 	logger.Logger.Info("EasyUKey Client 关闭", "duration", time.Since(shutdownStart))
 }

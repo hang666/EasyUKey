@@ -5,7 +5,7 @@ EasyUKey 是一个基于USB设备的高安全性认证服务组件，简易U盾�
 ## TODO
 
 - [ ] 实现多平台支持
-- [ ] client端使用pin+encryption_key加密存储信息
+- [x] client端使用pin+encryption_key加密存储信息
 - [ ] 通信加密
 - [ ] 异步回调
 - [ ] 完善管理页面

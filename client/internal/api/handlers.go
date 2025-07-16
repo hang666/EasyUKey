@@ -8,6 +8,9 @@ import (
 	"time"
 
 	"github.com/hang666/EasyUKey/client/internal/confirmation"
+	"github.com/hang666/EasyUKey/client/internal/global"
+	"github.com/hang666/EasyUKey/client/internal/pin"
+	"github.com/hang666/EasyUKey/shared/pkg/identity"
 	"github.com/hang666/EasyUKey/shared/pkg/logger"
 
 	"github.com/labstack/echo/v4"
@@ -93,6 +96,22 @@ func HandleConfirmAction(c echo.Context) error {
 	action := payload.Action
 	confirmed := action == "confirm"
 
+	// 如果是确认认证且提供了PIN，需要进行PIN验证
+	if confirmed && payload.PIN != "" {
+		if err := pin.ValidatePIN(payload.PIN); err != nil {
+			return c.JSON(http.StatusBadRequest, ConfirmActionResponse{
+				Message:       "PIN格式错误",
+				Status:        ConfirmActionStatusError,
+				ConfirmStatus: false,
+			})
+		}
+
+		// 将PIN发送到PIN管理器，供认证流程使用
+		if global.PinManager != nil {
+			global.PinManager.SendPIN(payload.PIN)
+		}
+	}
+
 	confirmResult := confirmation.AuthConfirmation{
 		RequestID: request.ID,
 		Confirmed: confirmed,
@@ -118,4 +137,46 @@ func renderErrorPage(c echo.Context, statusCode int, title, message string) erro
 	}
 	_ = c.Render(statusCode, "error.html", data)
 	return nil
+}
+
+// HandlePINPage 处理PIN设置页面
+func HandlePINPage(c echo.Context) error {
+	return c.Render(http.StatusOK, "pin.html", nil)
+}
+
+// HandlePINSetup 处理PIN设置请求
+func HandlePINSetup(c echo.Context) error {
+	var payload PINSetupPayload
+	if err := c.Bind(&payload); err != nil {
+		return c.JSON(http.StatusBadRequest, PINSetupResponse{
+			Message: "无效的请求体",
+			Status:  ConfirmActionStatusError,
+		})
+	}
+
+	// 验证PIN格式
+	if err := pin.ValidatePIN(payload.PIN); err != nil {
+		return c.JSON(http.StatusBadRequest, PINSetupResponse{
+			Message: "PIN格式错误",
+			Status:  ConfirmActionStatusError,
+		})
+	}
+
+	// 检查是否已经初始化
+	if identity.IsInitialized(global.SecureStoragePath) {
+		return c.JSON(http.StatusBadRequest, PINSetupResponse{
+			Message: "设备已经初始化",
+			Status:  ConfirmActionStatusError,
+		})
+	}
+
+	// 将PIN发送到PIN管理器，供初始化流程使用
+	if global.PinManager != nil {
+		global.PinManager.SendPIN(payload.PIN)
+	}
+
+	return c.JSON(http.StatusOK, PINSetupResponse{
+		Message: "PIN设置成功，正在初始化设备...",
+		Status:  ConfirmActionStatusSuccess,
+	})
 }

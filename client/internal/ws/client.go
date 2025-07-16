@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hang666/EasyUKey/client/internal/confirmation"
 	"github.com/hang666/EasyUKey/shared/pkg/logger"
 	"github.com/hang666/EasyUKey/shared/pkg/wsutil"
 
@@ -55,6 +56,12 @@ func Connect() error {
 
 	// 根据设备初始化状态发送对应请求
 	if !isDeviceInitialized {
+		// 显示PIN设置页面
+		if err := confirmation.ShowPINSetupPage(); err != nil {
+			logger.Logger.Error("显示PIN设置页面失败", "error", err)
+		} else {
+			logger.Logger.Info("已打开PIN设置页面，等待用户设置PIN")
+		}
 		err = SendDeviceInitRequest()
 	} else {
 		err = SendDeviceRegistration()
