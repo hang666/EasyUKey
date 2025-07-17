@@ -61,12 +61,14 @@ func handleAuthRequest(message messages.WSMessage) {
 	confirmResult, err := confirmation.WaitForConfirmation(timeout)
 	if err != nil {
 		logger.Logger.Error("等待用户确认失败", "error", err)
+		confirmation.SendResult(false, "认证超时")
 		SendAuthResponse(authReq.RequestID, false, "", "", dev.SerialNumber, dev.VolumeSerialNumber, errors.ErrWaitConfirmFailed.Error())
 		return
 	}
 
 	if !confirmResult.Confirmed {
 		logger.Logger.Info("用户拒绝认证")
+		confirmation.SendResult(false, "用户拒绝认证")
 		SendAuthResponse(authReq.RequestID, false, "", "", dev.SerialNumber, dev.VolumeSerialNumber, errors.ErrUserRejected.Error())
 		return
 	}
@@ -77,6 +79,7 @@ func handleAuthRequest(message messages.WSMessage) {
 	// 等待PIN输入
 	pin, err := global.PinManager.WaitPIN()
 	if err != nil {
+		confirmation.SendResult(false, "PIN验证失败")
 		SendAuthResponse(authReq.RequestID, false, "", "", dev.SerialNumber, dev.VolumeSerialNumber, "PIN输入超时")
 		return
 	}
@@ -84,6 +87,7 @@ func handleAuthRequest(message messages.WSMessage) {
 	// 使用PIN获取当前OnceKey
 	currentOnceKey, err := identity.GetOnceKey(pin, global.Config.EncryptKeyStr, global.SecureStoragePath)
 	if err != nil {
+		confirmation.SendResult(false, "PIN验证失败")
 		SendAuthResponse(authReq.RequestID, false, "", "", dev.SerialNumber, dev.VolumeSerialNumber, "PIN验证失败")
 		return
 	}
@@ -91,6 +95,7 @@ func handleAuthRequest(message messages.WSMessage) {
 	// 使用PIN生成完整密钥
 	fullKey, err := identity.GetFullKey(pin, global.Config.EncryptKeyStr, dev.SerialNumber, dev.VolumeSerialNumber, global.SecureStoragePath)
 	if err != nil {
+		confirmation.SendResult(false, "密钥生成失败")
 		SendAuthResponse(authReq.RequestID, false, "", "", dev.SerialNumber, dev.VolumeSerialNumber, "密钥生成失败")
 		return
 	}
@@ -102,6 +107,9 @@ func handleAuthRequest(message messages.WSMessage) {
 
 	logger.Logger.Info("认证成功，发送认证响应")
 	SendAuthResponse(authReq.RequestID, true, authKey, currentOnceKey, dev.SerialNumber, dev.VolumeSerialNumber, "")
+
+	// 通知HTTP API认证成功
+	confirmation.SendResult(true, "认证成功")
 }
 
 // handleDeviceInitResponse 处理设备初始化响应

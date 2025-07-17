@@ -96,8 +96,25 @@ func HandleConfirmAction(c echo.Context) error {
 	action := payload.Action
 	confirmed := action == "confirm"
 
+	// 如果用户拒绝，立即返回
+	if !confirmed {
+		confirmResult := confirmation.AuthConfirmation{
+			RequestID: request.ID,
+			Confirmed: false,
+			Timestamp: time.Now(),
+		}
+		confirmation.SendConfirmation(confirmResult)
+		logger.Logger.Info("用户拒绝认证", "requestID", request.ID)
+
+		return c.JSON(http.StatusOK, ConfirmActionResponse{
+			Message:       "认证已拒绝",
+			Status:        ConfirmActionStatusSuccess,
+			ConfirmStatus: false,
+		})
+	}
+
 	// 如果是确认认证且提供了PIN，需要进行PIN验证
-	if confirmed && payload.PIN != "" {
+	if payload.PIN != "" {
 		if err := pin.ValidatePIN(payload.PIN); err != nil {
 			return c.JSON(http.StatusBadRequest, ConfirmActionResponse{
 				Message:       "PIN格式错误",
@@ -120,12 +137,31 @@ func HandleConfirmAction(c echo.Context) error {
 
 	// 发送确认结果
 	confirmation.SendConfirmation(confirmResult)
-	logger.Logger.Info("用户操作已通过Web Handler转发", "action", action)
+	logger.Logger.Info("用户确认认证，等待WebSocket处理结果", "requestID", request.ID)
+
+	// 等待WebSocket认证结果
+	result, err := confirmation.WaitForResult(60 * time.Second)
+	if err != nil {
+		logger.Logger.Error("等待认证结果超时", "requestID", request.ID, "error", err)
+		return c.JSON(http.StatusOK, ConfirmActionResponse{
+			Message:       "认证超时",
+			Status:        ConfirmActionStatusError,
+			ConfirmStatus: false,
+		})
+	}
+
+	// 返回真正的认证结果
+	status := ConfirmActionStatusSuccess
+	if !result.Success {
+		status = ConfirmActionStatusError
+	}
+
+	logger.Logger.Info("认证结果已返回", "requestID", request.ID, "success", result.Success, "message", result.Message)
 
 	return c.JSON(http.StatusOK, ConfirmActionResponse{
-		Message:       "操作已处理",
-		Status:        ConfirmActionStatusSuccess,
-		ConfirmStatus: confirmed,
+		Message:       result.Message,
+		Status:        status,
+		ConfirmStatus: result.Success,
 	})
 }
 

@@ -24,14 +24,22 @@ type AuthConfirmation struct {
 	Timestamp time.Time `json:"timestamp"`
 }
 
+// AuthResult 认证结果结构
+type AuthResult struct {
+	Success bool   `json:"success"`
+	Message string `json:"message"`
+}
+
 var (
 	confirmChan chan AuthConfirmation
+	resultChan  chan AuthResult
 	serverPort  int
 )
 
 // Init initializes the confirmation manager with the http server port.
 func Init(port int) {
 	confirmChan = make(chan AuthConfirmation, 1)
+	resultChan = make(chan AuthResult, 1)
 	serverPort = port
 }
 
@@ -74,4 +82,24 @@ func SendConfirmation(confirmation AuthConfirmation) {
 func ShowPINSetupPage() error {
 	url := fmt.Sprintf("http://localhost:%d/pin", serverPort)
 	return OpenBrowser(url)
+}
+
+// WaitForResult 等待认证结果
+func WaitForResult(timeout time.Duration) (AuthResult, error) {
+	select {
+	case result := <-resultChan:
+		return result, nil
+	case <-time.After(timeout):
+		return AuthResult{}, fmt.Errorf("认证超时")
+	}
+}
+
+// SendResult 发送认证结果
+func SendResult(success bool, message string) {
+	select {
+	case resultChan <- AuthResult{Success: success, Message: message}:
+		// 成功发送
+	default:
+		// 防止阻塞
+	}
 }

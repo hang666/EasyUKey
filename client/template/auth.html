@@ -277,7 +277,7 @@
 						<p class="text-lg text-gray-600" x-text="resultMessage"></p>
 					</div>
 					<div class="text-sm text-gray-500">
-						<p>此窗口将在 5 秒后自动关闭</p>
+						<p>此窗口将在 10 秒后自动关闭</p>
 					</div>
 				</div>
 
@@ -291,7 +291,10 @@
 						<div
 							class="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"
 						></div>
-						<p class="text-gray-600">处理中...</p>
+						<p
+							class="text-gray-600"
+							x-text="currentStep === 'pin' ? '正在验证认证，请稍候...' : '处理中...'"
+						></p>
 					</div>
 				</div>
 			</div>
@@ -382,11 +385,11 @@
 							if (!response.ok) {
 								throw new Error(result.message || "认证失败");
 							}
-							this.showResult(
-								result.message,
-								result.confirmStatus,
-								result.status
-							);
+
+							// 显示真正的认证结果
+							const isSuccess =
+								result.status === "success" && result.confirmStatus === true;
+							this.showResult(result.message, isSuccess, result.status);
 						} catch (error) {
 							console.error("认证失败:", error);
 							this.pinErrorMessage = error.message || "PIN验证失败，请重试";
@@ -442,7 +445,7 @@
 
 						setTimeout(() => {
 							window.close();
-						}, 5000);
+						}, 10000);
 					},
 				};
 			}
