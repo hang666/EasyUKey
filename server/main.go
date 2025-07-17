@@ -8,6 +8,8 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/labstack/echo/v4"
+
 	"github.com/hang666/EasyUKey/server/internal/api"
 	"github.com/hang666/EasyUKey/server/internal/global"
 	"github.com/hang666/EasyUKey/server/internal/initialize"
@@ -16,8 +18,6 @@ import (
 	"github.com/hang666/EasyUKey/server/internal/service"
 	"github.com/hang666/EasyUKey/server/internal/ws"
 	"github.com/hang666/EasyUKey/shared/pkg/logger"
-
-	"github.com/labstack/echo/v4"
 )
 
 func main() {

@@ -4,12 +4,12 @@ import (
 	"sync"
 	"time"
 
+	"gorm.io/gorm"
+
 	"github.com/hang666/EasyUKey/server/internal/config"
 	"github.com/hang666/EasyUKey/server/internal/global"
 	"github.com/hang666/EasyUKey/server/internal/model/entity"
 	"github.com/hang666/EasyUKey/shared/pkg/logger"
-
-	"gorm.io/gorm"
 )
 
 // GlobalStatusSync 全局状态同步管理器实例

@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hang666/EasyUKey/sdk/request"
 	"github.com/hang666/EasyUKey/server/internal/global"
 	"github.com/hang666/EasyUKey/server/internal/model/entity"
-	"github.com/hang666/EasyUKey/server/internal/model/request"
 	"github.com/hang666/EasyUKey/shared/pkg/logger"
 )
 

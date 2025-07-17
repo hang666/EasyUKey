@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/hang666/EasyUKey/sdk"
+	"github.com/hang666/EasyUKey/sdk/request"
 )
 
 func TestAuth(t *testing.T) {
@@ -11,7 +12,7 @@ func TestAuth(t *testing.T) {
 
 	authData, err := client.StartAuth(
 		"testuser",
-		&sdk.AuthRequest{
+		&request.AuthRequest{
 			Challenge: "123456",
 			Timeout:   600,
 			UserID:    "testuser",

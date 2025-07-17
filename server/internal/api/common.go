@@ -3,9 +3,9 @@ package api
 import (
 	"strconv"
 
-	"github.com/hang666/EasyUKey/shared/pkg/errors"
-
 	"github.com/labstack/echo/v4"
+
+	"github.com/hang666/EasyUKey/shared/pkg/errors"
 )
 
 // bindAndValidate 绑定并验证请求参数

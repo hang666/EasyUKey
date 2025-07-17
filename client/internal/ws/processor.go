@@ -1,10 +1,10 @@
 package ws
 
 import (
+	"github.com/gorilla/websocket"
+
 	"github.com/hang666/EasyUKey/shared/pkg/logger"
 	"github.com/hang666/EasyUKey/shared/pkg/messages"
-
-	"github.com/gorilla/websocket"
 )
 
 // processMessages is the main loop for reading and dispatching incoming WebSocket messages.

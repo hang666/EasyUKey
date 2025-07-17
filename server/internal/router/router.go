@@ -1,11 +1,11 @@
 package router
 
 import (
+	"github.com/labstack/echo/v4"
+
 	"github.com/hang666/EasyUKey/server/internal/api"
 	"github.com/hang666/EasyUKey/server/internal/middleware"
 	"github.com/hang666/EasyUKey/server/internal/ws"
-
-	"github.com/labstack/echo/v4"
 )
 
 // SetupRoutes 设置路由

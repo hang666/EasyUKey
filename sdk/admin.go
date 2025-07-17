@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"net/url"
 	"strconv"
+
+	"github.com/hang666/EasyUKey/sdk/request"
+	"github.com/hang666/EasyUKey/sdk/response"
 )
 
 // AdminClient 管理员客户端
@@ -26,7 +29,7 @@ func (c *AdminClient) VerifyAdminKey() error {
 }
 
 // CreateUser 创建用户
-func (c *AdminClient) CreateUser(req *CreateUserRequest) (*User, error) {
+func (c *AdminClient) CreateUser(req *request.CreateUserRequest) (*User, error) {
 	resp, err := c.request("POST", "/api/v1/admin/users", req)
 	if err != nil {
 		return nil, err
@@ -89,7 +92,7 @@ func (c *AdminClient) GetUsers(page, pageSize int) ([]User, int64, error) {
 }
 
 // UpdateUser 更新用户
-func (c *AdminClient) UpdateUser(userID uint, req *UpdateUserRequest) (*User, error) {
+func (c *AdminClient) UpdateUser(userID uint, req *request.UpdateUserRequest) (*User, error) {
 	path := fmt.Sprintf("/api/v1/admin/users/%d", userID)
 	resp, err := c.request("PUT", path, req)
 	if err != nil {
@@ -128,7 +131,7 @@ func (c *AdminClient) GetUserDevices(username string) ([]Device, error) {
 }
 
 // GetDevices 获取设备列表
-func (c *AdminClient) GetDevices(page, pageSize int, filter *DeviceFilter) ([]Device, int64, error) {
+func (c *AdminClient) GetDevices(page, pageSize int, filter *request.DeviceFilter) ([]Device, int64, error) {
 	if page < 1 {
 		page = 1
 	}
@@ -200,7 +203,7 @@ func (c *AdminClient) GetDevice(deviceID uint) (*Device, error) {
 }
 
 // UpdateDevice 更新设备
-func (c *AdminClient) UpdateDevice(deviceID uint, req *UpdateDeviceRequest) (*Device, error) {
+func (c *AdminClient) UpdateDevice(deviceID uint, req *request.UpdateDeviceRequest) (*Device, error) {
 	path := fmt.Sprintf("/api/v1/admin/devices/%d", deviceID)
 	resp, err := c.request("PUT", path, req)
 	if err != nil {
@@ -216,7 +219,7 @@ func (c *AdminClient) UpdateDevice(deviceID uint, req *UpdateDeviceRequest) (*De
 }
 
 // LinkDeviceToUser 绑定设备到用户
-func (c *AdminClient) LinkDeviceToUser(deviceID uint, req *LinkDeviceToUserRequest) (*Device, error) {
+func (c *AdminClient) LinkDeviceToUser(deviceID uint, req *request.LinkDeviceToUserRequest) (*Device, error) {
 	path := fmt.Sprintf("/api/v1/admin/devices/%d/user", deviceID)
 	resp, err := c.request("POST", path, req)
 	if err != nil {
@@ -264,13 +267,13 @@ func (c *AdminClient) OfflineDevice(deviceID uint) (*Device, error) {
 }
 
 // GetDeviceStatistics 获取设备统计信息
-func (c *AdminClient) GetDeviceStatistics() (*DeviceStatistics, error) {
+func (c *AdminClient) GetDeviceStatistics() (*response.DeviceStatistics, error) {
 	resp, err := c.request("GET", "/api/v1/admin/devices/statistics", nil)
 	if err != nil {
 		return nil, err
 	}
 
-	var stats DeviceStatistics
+	var stats response.DeviceStatistics
 	if err := mapToStruct(resp.Data, &stats); err != nil {
 		return nil, fmt.Errorf("解析统计数据失败: %w", err)
 	}
@@ -279,7 +282,7 @@ func (c *AdminClient) GetDeviceStatistics() (*DeviceStatistics, error) {
 }
 
 // CreateAPIKey 创建API密钥
-func (c *AdminClient) CreateAPIKey(req *CreateAPIKeyRequest) (*APIKey, error) {
+func (c *AdminClient) CreateAPIKey(req *request.CreateAPIKeyRequest) (*APIKey, error) {
 	resp, err := c.request("POST", "/api/v1/admin/apikeys", req)
 	if err != nil {
 		return nil, err

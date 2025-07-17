@@ -24,9 +24,11 @@ type VerifyAuthData struct {
 	Message string `json:"message,omitempty"`
 }
 
-// DeviceStatisticsData 设备统计数据
-type DeviceStatisticsData struct {
+// DeviceStatistics 设备统计数据
+type DeviceStatistics struct {
 	TotalDevices   int64 `json:"total_devices"`
 	OnlineDevices  int64 `json:"online_devices"`
 	OfflineDevices int64 `json:"offline_devices"`
+	ActiveDevices  int64 `json:"active_devices"`
+	BoundDevices   int64 `json:"bound_devices"`
 }

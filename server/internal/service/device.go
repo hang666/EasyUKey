@@ -6,16 +6,16 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/google/uuid"
+	"gorm.io/gorm"
+
+	"github.com/hang666/EasyUKey/sdk/request"
 	"github.com/hang666/EasyUKey/server/internal/global"
 	"github.com/hang666/EasyUKey/server/internal/model/entity"
-	"github.com/hang666/EasyUKey/server/internal/model/request"
 	"github.com/hang666/EasyUKey/shared/pkg/errors"
 	"github.com/hang666/EasyUKey/shared/pkg/identity"
 	"github.com/hang666/EasyUKey/shared/pkg/logger"
 	"github.com/hang666/EasyUKey/shared/pkg/messages"
-
-	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
 // InitDevice 初始化设备

@@ -4,13 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"gorm.io/gorm"
+
+	"github.com/hang666/EasyUKey/sdk/request"
 	"github.com/hang666/EasyUKey/server/internal/global"
 	"github.com/hang666/EasyUKey/server/internal/model/entity"
-	"github.com/hang666/EasyUKey/server/internal/model/request"
 	"github.com/hang666/EasyUKey/shared/pkg/errors"
 	"github.com/hang666/EasyUKey/shared/pkg/logger"
-
-	"gorm.io/gorm"
 )
 
 // CreateUser 创建用户

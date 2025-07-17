@@ -3,14 +3,14 @@ package api
 import (
 	"net/http"
 
+	"github.com/labstack/echo/v4"
+
+	"github.com/hang666/EasyUKey/sdk/request"
+	"github.com/hang666/EasyUKey/sdk/response"
 	"github.com/hang666/EasyUKey/server/internal/model/entity"
-	"github.com/hang666/EasyUKey/server/internal/model/request"
-	"github.com/hang666/EasyUKey/server/internal/model/response"
 	"github.com/hang666/EasyUKey/server/internal/service"
 	"github.com/hang666/EasyUKey/shared/pkg/errors"
 	"github.com/hang666/EasyUKey/shared/pkg/logger"
-
-	"github.com/labstack/echo/v4"
 )
 
 // StartAuth 发起用户认证

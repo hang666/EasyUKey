@@ -7,12 +7,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gorilla/websocket"
+
 	"github.com/hang666/EasyUKey/server/internal/config"
 	"github.com/hang666/EasyUKey/shared/pkg/identity"
 	"github.com/hang666/EasyUKey/shared/pkg/logger"
 	"github.com/hang666/EasyUKey/shared/pkg/messages"
-
-	"github.com/gorilla/websocket"
 )
 
 // Client WebSocket客户端连接

@@ -7,6 +7,9 @@ import (
 	"io"
 	"net/http"
 	"time"
+
+	"github.com/hang666/EasyUKey/sdk/request"
+	"github.com/hang666/EasyUKey/sdk/response"
 )
 
 // Client EasyUKey SDK客户端
@@ -38,7 +41,7 @@ func (c *Client) SetAPIKey(apiKey string) {
 }
 
 // 发送HTTP请求的通用方法
-func (c *Client) request(method, path string, body interface{}) (*Response, error) {
+func (c *Client) request(method, path string, body interface{}) (*response.Response, error) {
 	var reqBody io.Reader
 	if body != nil {
 		jsonData, err := json.Marshal(body)
@@ -68,7 +71,7 @@ func (c *Client) request(method, path string, body interface{}) (*Response, erro
 	}
 	defer resp.Body.Close()
 
-	var result Response
+	var result response.Response
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return nil, fmt.Errorf("解析响应失败: %w", err)
 	}
@@ -81,13 +84,13 @@ func (c *Client) request(method, path string, body interface{}) (*Response, erro
 }
 
 // StartAuth 发起用户认证
-func (c *Client) StartAuth(username string, req *AuthRequest) (*AuthData, error) {
+func (c *Client) StartAuth(username string, req *request.AuthRequest) (*response.AuthData, error) {
 	resp, err := c.request("POST", "/api/v1/users/"+username+"/auth", req)
 	if err != nil {
 		return nil, err
 	}
 
-	var authData AuthData
+	var authData response.AuthData
 	if err := mapToStruct(resp.Data, &authData); err != nil {
 		return nil, fmt.Errorf("解析认证数据失败: %w", err)
 	}
@@ -96,13 +99,13 @@ func (c *Client) StartAuth(username string, req *AuthRequest) (*AuthData, error)
 }
 
 // VerifyAuth 验证认证结果
-func (c *Client) VerifyAuth(req *VerifyAuthRequest) (*VerifyAuthData, error) {
+func (c *Client) VerifyAuth(req *request.VerifyAuthRequest) (*response.VerifyAuthData, error) {
 	resp, err := c.request("POST", "/api/v1/auth/verify", req)
 	if err != nil {
 		return nil, err
 	}
 
-	var verifyData VerifyAuthData
+	var verifyData response.VerifyAuthData
 	if err := mapToStruct(resp.Data, &verifyData); err != nil {
 		return nil, fmt.Errorf("解析验证数据失败: %w", err)
 	}

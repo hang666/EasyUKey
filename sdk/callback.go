@@ -9,11 +9,13 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/hang666/EasyUKey/sdk/request"
 )
 
 // ValidateCallbackRequest 验证回调请求
-func ValidateCallbackRequest(data []byte, secret string) (*CallbackRequest, error) {
-	var req CallbackRequest
+func ValidateCallbackRequest(data []byte, secret string) (*request.CallbackRequest, error) {
+	var req request.CallbackRequest
 	if err := json.Unmarshal(data, &req); err != nil {
 		return nil, fmt.Errorf("invalid JSON format: %v", err)
 	}
@@ -53,7 +55,7 @@ func ValidateCallbackRequest(data []byte, secret string) (*CallbackRequest, erro
 }
 
 // verifyCallbackSignature 验证回调签名
-func verifyCallbackSignature(req *CallbackRequest, secret string) bool {
+func verifyCallbackSignature(req *request.CallbackRequest, secret string) bool {
 	originalSignature := req.Signature
 	req.Signature = "" // 临时清空签名字段
 
@@ -64,7 +66,7 @@ func verifyCallbackSignature(req *CallbackRequest, secret string) bool {
 }
 
 // generateCallbackSignature 生成回调签名
-func generateCallbackSignature(req *CallbackRequest, secret string) string {
+func generateCallbackSignature(req *request.CallbackRequest, secret string) string {
 	// 构建签名字符串
 	data := map[string]string{
 		"session_id": req.SessionID,
@@ -100,8 +102,8 @@ func generateCallbackSignature(req *CallbackRequest, secret string) string {
 
 // CallbackHandler 回调处理器接口
 type CallbackHandler interface {
-	OnAuthSuccess(req *CallbackRequest) error
-	OnAuthFailure(req *CallbackRequest) error
+	OnAuthSuccess(req *request.CallbackRequest) error
+	OnAuthFailure(req *request.CallbackRequest) error
 }
 
 // HandleCallback 处理回调请求

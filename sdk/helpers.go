@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"math/big"
 	"time"
+
+	"github.com/hang666/EasyUKey/sdk/request"
+	"github.com/hang666/EasyUKey/sdk/response"
 )
 
 // AuthHelper 认证助手
@@ -35,7 +38,7 @@ func (h *AuthHelper) GenerateChallenge() (string, error) {
 }
 
 // SimpleAuth 简单认证流程
-func (h *AuthHelper) SimpleAuth(username, apiKey string) (*VerifyAuthData, error) {
+func (h *AuthHelper) SimpleAuth(username, apiKey string) (*response.VerifyAuthData, error) {
 	// 生成挑战码
 	challenge, err := h.GenerateChallenge()
 	if err != nil {
@@ -43,7 +46,7 @@ func (h *AuthHelper) SimpleAuth(username, apiKey string) (*VerifyAuthData, error
 	}
 
 	// 发起认证
-	authReq := &AuthRequest{
+	authReq := &request.AuthRequest{
 		UserID:    username,
 		Challenge: challenge,
 		Timeout:   60,
@@ -59,8 +62,8 @@ func (h *AuthHelper) SimpleAuth(username, apiKey string) (*VerifyAuthData, error
 }
 
 // WaitForAuth 等待认证完成
-func (h *AuthHelper) WaitForAuth(apiKey, sessionID string, timeout time.Duration) (*VerifyAuthData, error) {
-	verifyReq := &VerifyAuthRequest{
+func (h *AuthHelper) WaitForAuth(apiKey, sessionID string, timeout time.Duration) (*response.VerifyAuthData, error) {
+	verifyReq := &request.VerifyAuthRequest{
 		SessionID: sessionID,
 	}
 
@@ -87,13 +90,13 @@ func (h *AuthHelper) WaitForAuth(apiKey, sessionID string, timeout time.Duration
 }
 
 // QuickAuth 快速认证（带消息和动作）
-func (h *AuthHelper) QuickAuth(username, apiKey, action, message string) (*VerifyAuthData, error) {
+func (h *AuthHelper) QuickAuth(username, apiKey, action, message string) (*response.VerifyAuthData, error) {
 	challenge, err := h.GenerateChallenge()
 	if err != nil {
 		return nil, err
 	}
 
-	authReq := &AuthRequest{
+	authReq := &request.AuthRequest{
 		UserID:    username,
 		Challenge: challenge,
 		Action:    action,

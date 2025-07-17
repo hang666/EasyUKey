@@ -3,12 +3,11 @@ package api
 import (
 	"net/http"
 
-	"github.com/hang666/EasyUKey/server/internal/model/response"
+	"github.com/labstack/echo/v4"
 
+	"github.com/hang666/EasyUKey/sdk/response"
 	"github.com/hang666/EasyUKey/server/internal/service"
 	"github.com/hang666/EasyUKey/shared/pkg/errors"
-
-	"github.com/labstack/echo/v4"
 )
 
 // AdminPanel 管理员面板页面

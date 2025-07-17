@@ -4,12 +4,12 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/hang666/EasyUKey/server/internal/model/request"
-	"github.com/hang666/EasyUKey/server/internal/model/response"
+	"github.com/labstack/echo/v4"
+
+	"github.com/hang666/EasyUKey/sdk/request"
+	"github.com/hang666/EasyUKey/sdk/response"
 	"github.com/hang666/EasyUKey/server/internal/service"
 	"github.com/hang666/EasyUKey/shared/pkg/logger"
-
-	"github.com/labstack/echo/v4"
 )
 
 // UpdateDevice 更新设备信息
@@ -169,11 +169,12 @@ func GetDeviceStatistics(c echo.Context) error {
 		return err
 	}
 
-	statsData := map[string]interface{}{
-		"total_devices":  totalDevices,
-		"online_devices": onlineDevices,
-		"active_devices": activeDevices,
-		"bound_devices":  boundDevices,
+	statsData := &response.DeviceStatistics{
+		TotalDevices:   totalDevices,
+		OnlineDevices:  onlineDevices,
+		OfflineDevices: totalDevices - onlineDevices,
+		ActiveDevices:  activeDevices,
+		BoundDevices:   boundDevices,
 	}
 
 	return c.JSON(http.StatusOK, &response.Response{Success: true, Message: "获取设备统计成功", Data: statsData})

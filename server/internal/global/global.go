@@ -1,9 +1,9 @@
 package global
 
 import (
-	"github.com/hang666/EasyUKey/server/internal/config"
-
 	"gorm.io/gorm"
+
+	"github.com/hang666/EasyUKey/server/internal/config"
 )
 
 var (

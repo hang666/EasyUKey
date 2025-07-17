@@ -4,13 +4,13 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/gorilla/websocket"
+	"github.com/labstack/echo/v4"
+
 	"github.com/hang666/EasyUKey/server/internal/config"
 	"github.com/hang666/EasyUKey/server/internal/service"
 	"github.com/hang666/EasyUKey/shared/pkg/logger"
 	"github.com/hang666/EasyUKey/shared/pkg/messages"
-
-	"github.com/gorilla/websocket"
-	"github.com/labstack/echo/v4"
 )
 
 // HandleWebSocket 处理WebSocket连接

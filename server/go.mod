@@ -7,6 +7,7 @@ replace github.com/hang666/EasyUKey/shared => ../shared
 require (
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.3
+	github.com/hang666/EasyUKey/sdk v0.0.0
 	github.com/hang666/EasyUKey/shared v0.0.0
 	github.com/labstack/echo/v4 v4.13.4
 	github.com/spf13/viper v1.20.1
@@ -44,3 +45,5 @@ require (
 	golang.org/x/text v0.25.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+replace github.com/hang666/EasyUKey/sdk => ../sdk

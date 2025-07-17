@@ -5,14 +5,14 @@ import (
 	"encoding/hex"
 	"fmt"
 
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
+	gormLogger "gorm.io/gorm/logger"
+
 	"github.com/hang666/EasyUKey/server/internal/config"
 	"github.com/hang666/EasyUKey/server/internal/global"
 	"github.com/hang666/EasyUKey/server/internal/model/entity"
 	"github.com/hang666/EasyUKey/shared/pkg/logger"
-
-	"gorm.io/driver/mysql"
-	"gorm.io/gorm"
-	gormLogger "gorm.io/gorm/logger"
 )
 
 // generateRandomAPIKey 生成随机API密钥

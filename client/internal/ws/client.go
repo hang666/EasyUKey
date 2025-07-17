@@ -7,13 +7,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gorilla/websocket"
+
 	"github.com/hang666/EasyUKey/client/internal/confirmation"
 	"github.com/hang666/EasyUKey/shared/pkg/identity"
 	"github.com/hang666/EasyUKey/shared/pkg/logger"
 	"github.com/hang666/EasyUKey/shared/pkg/messages"
 	"github.com/hang666/EasyUKey/shared/pkg/wsutil"
-
-	"github.com/gorilla/websocket"
 )
 
 const (

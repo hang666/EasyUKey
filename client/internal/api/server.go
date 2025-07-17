@@ -9,9 +9,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/hang666/EasyUKey/shared/pkg/logger"
-
 	"github.com/labstack/echo/v4"
+
+	"github.com/hang666/EasyUKey/shared/pkg/logger"
 )
 
 var httpServer *echo.Echo

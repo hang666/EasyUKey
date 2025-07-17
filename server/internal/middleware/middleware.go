@@ -1,15 +1,14 @@
 package middleware
 
 import (
-	"golang.org/x/time/rate"
-
-	"github.com/hang666/EasyUKey/server/internal/global"
-	"github.com/hang666/EasyUKey/server/internal/model/response"
-	"github.com/hang666/EasyUKey/shared/pkg/errors"
-	"github.com/hang666/EasyUKey/shared/pkg/logger"
-
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"golang.org/x/time/rate"
+
+	"github.com/hang666/EasyUKey/sdk/response"
+	"github.com/hang666/EasyUKey/server/internal/global"
+	"github.com/hang666/EasyUKey/shared/pkg/errors"
+	"github.com/hang666/EasyUKey/shared/pkg/logger"
 )
 
 // skipper 函数用于跳过特定路由

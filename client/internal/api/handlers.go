@@ -7,13 +7,13 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/labstack/echo/v4"
+
 	"github.com/hang666/EasyUKey/client/internal/confirmation"
 	"github.com/hang666/EasyUKey/client/internal/global"
 	"github.com/hang666/EasyUKey/client/internal/pin"
 	"github.com/hang666/EasyUKey/shared/pkg/identity"
 	"github.com/hang666/EasyUKey/shared/pkg/logger"
-
-	"github.com/labstack/echo/v4"
 )
 
 // decodeAuthRequest 解码认证请求的通用函数

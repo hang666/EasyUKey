@@ -3,10 +3,10 @@ package middleware
 import (
 	"net/http"
 
+	"github.com/labstack/echo/v4"
+
 	"github.com/hang666/EasyUKey/server/internal/global"
 	"github.com/hang666/EasyUKey/server/internal/model/entity"
-
-	"github.com/labstack/echo/v4"
 )
 
 // APIAuth 统一API身份验证中间件
