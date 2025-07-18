@@ -140,21 +140,14 @@ func ProcessAuthResponse(sessionID string, authResp *messages.AuthResponseMessag
 		authResp.SerialNumber, authResp.VolumeSerialNumber).First(&device)
 
 	if deviceResult.Error != nil {
-		logger.Logger.Error("认证响应中的设备未找到",
-			"session_id", sessionID,
-			"serial_number", authResp.SerialNumber,
-			"volume_serial_number", authResp.VolumeSerialNumber)
-
+		logger.Logger.Error("认证响应中的设备未找到", "session_id", sessionID, "serial_number", authResp.SerialNumber)
 		return fmt.Errorf("设备未找到")
 	}
 
 	// 验证auth_key
 	validDevice, err := ValidateAuthKey(authResp.AuthKey, device.ID, session.Challenge)
 	if err != nil {
-		logger.Logger.Error("认证密钥验证失败",
-			"session_id", sessionID,
-			"device_id", device.ID,
-			"error", err.Error())
+		logger.Logger.Error("认证密钥验证失败", "session_id", sessionID, "error", err.Error())
 
 		// 在密钥验证失败时也记录失败状态
 		updates := map[string]interface{}{
@@ -178,11 +171,7 @@ func ProcessAuthResponse(sessionID string, authResp *messages.AuthResponseMessag
 		}
 
 		if !canPerformAction {
-			logger.Logger.Warn("设备权限不足，认证失败",
-				"session_id", sessionID,
-				"device_id", validDevice.ID,
-				"required_action", session.Action,
-				"device_permissions", validDevice.Permissions)
+			logger.Logger.Warn("设备权限不足", "session_id", sessionID, "required_action", session.Action)
 
 			// 更新会话状态为失败并返回错误
 			updates := map[string]interface{}{
@@ -206,30 +195,17 @@ func ProcessAuthResponse(sessionID string, authResp *messages.AuthResponseMessag
 		// 认证成功
 		updates["result"] = entity.AuthResultSuccess
 		updates["status"] = entity.AuthStatusCompleted
-
-		logger.Logger.Info("认证成功",
-			"session_id", sessionID,
-			"user_id", session.UserID,
-			"device_id", validDevice.ID,
-			"serial_number", validDevice.SerialNumber)
+		logger.Logger.Info("认证成功", "session_id", sessionID, "device_id", validDevice.ID)
 	} else {
 		// 认证失败，区分用户拒绝和其他失败情况
 		updates["result"] = entity.AuthResultFailure
 
 		if authResp.Error == errs.ErrUserRejected.Error() {
 			updates["status"] = entity.AuthStatusRejected
-			logger.Logger.Info("用户拒绝认证",
-				"session_id", sessionID,
-				"user_id", session.UserID,
-				"device_id", validDevice.ID,
-				"serial_number", validDevice.SerialNumber)
+			logger.Logger.Info("认证拒绝", "session_id", sessionID, "device_id", validDevice.ID)
 		} else {
 			updates["status"] = entity.AuthStatusFailed
-			logger.Logger.Info("认证失败",
-				"session_id", sessionID,
-				"user_id", session.UserID,
-				"device_id", validDevice.ID,
-				"error", authResp.Error)
+			logger.Logger.Info("认证失败", "session_id", sessionID, "error", authResp.Error)
 		}
 	}
 
@@ -337,11 +313,6 @@ func StartAuth(req *request.AuthRequest, apiKey *entity.APIKey) (*entity.AuthSes
 		}
 	}
 
-	logger.Logger.Info("发起用户认证",
-		"session_id", sessionID,
-		"user_id", user.ID,
-		"username", req.UserID)
-
 	return &session, nil
 }
 
@@ -381,7 +352,6 @@ func sendAuthCallback(session *entity.AuthSession, serialNumber string) {
 	// 发送回调，最多重试3次
 	for i := 0; i < CallbackMaxRetries; i++ {
 		if sendHTTPCallback(session.CallbackURL, callbackReq) {
-			logger.Logger.Info("回调成功", "session_id", session.ID, "url", session.CallbackURL, "retries", i)
 			return
 		}
 

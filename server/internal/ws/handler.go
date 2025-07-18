@@ -125,15 +125,12 @@ func (c *Client) readPump() {
 		// 解析WebSocket消息
 		var wsMsg messages.WSMessage
 		if err := json.Unmarshal(messageBytes, &wsMsg); err != nil {
-			logger.Logger.Error("解析WebSocket消息失败", "error", err, "device_id", c.DeviceID)
 			continue
 		}
 
 		// 使用简化的消息分派机制
 		if err := dispatchMessage(c, &wsMsg); err != nil {
-			logger.Logger.Error("处理WebSocket消息失败", "error", err,
-				"device_id", c.DeviceID,
-				"message_type", wsMsg.Type)
+			logger.Logger.Error("处理WebSocket消息失败", "error", err, "type", wsMsg.Type, "device_id", c.DeviceID)
 		}
 	}
 }

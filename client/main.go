@@ -48,7 +48,7 @@ func main() {
 
 	startServices()
 
-	logger.Logger.Info("EasyUKey Client 已启动", "version", global.Config.Version)
+	logger.Logger.Info("EasyUKey Client 已启动")
 
 	<-sigChan
 	shutdown()
@@ -101,5 +101,5 @@ func shutdown() {
 		global.PinManager.Close()
 	}
 
-	logger.Logger.Info("EasyUKey Client 关闭", "duration", time.Since(shutdownStart))
+	logger.Logger.Info("EasyUKey Client 关闭完成", "耗时", time.Since(shutdownStart))
 }

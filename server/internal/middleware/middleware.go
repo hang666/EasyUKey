@@ -126,26 +126,8 @@ func LoggerMiddleware() echo.MiddlewareFunc {
 		LogUserAgent: true,
 		LogRequestID: true,
 		LogValuesFunc: func(c echo.Context, v middleware.RequestLoggerValues) error {
-			if v.Error == nil {
-				logger.Logger.Info("HTTP请求",
-					"method", v.Method,
-					"uri", v.URI,
-					"status", v.Status,
-					"latency", v.Latency,
-					"remote_ip", v.RemoteIP,
-					"user_agent", v.UserAgent,
-					"request_id", v.RequestID,
-				)
-			} else {
-				logger.Logger.Error("HTTP请求错误", "error", v.Error,
-					"method", v.Method,
-					"uri", v.URI,
-					"status", v.Status,
-					"latency", v.Latency,
-					"remote_ip", v.RemoteIP,
-					"user_agent", v.UserAgent,
-					"request_id", v.RequestID,
-				)
+			if v.Error != nil {
+				logger.Logger.Error("HTTP请求错误", "error", v.Error, "method", v.Method, "uri", v.URI, "status", v.Status)
 			}
 			return nil
 		},
@@ -158,13 +140,7 @@ func ErrorHandler(err error, c echo.Context) {
 	message := err.Error()
 
 	// 记录错误日志
-	logger.Logger.Error("HTTP错误处理", "error", err,
-		"method", c.Request().Method,
-		"uri", c.Request().RequestURI,
-		"status", code,
-		"remote_ip", c.RealIP(),
-		"request_id", c.Response().Header().Get(echo.HeaderXRequestID),
-	)
+	logger.Logger.Error("HTTP错误处理", "error", err, "method", c.Request().Method, "uri", c.Request().RequestURI, "status", code)
 
 	if !c.Response().Committed {
 		if c.Request().Method == echo.HEAD {
@@ -176,7 +152,7 @@ func ErrorHandler(err error, c echo.Context) {
 			})
 		}
 		if err != nil {
-			logger.Logger.Error("发送错误响应失败", "error", err)
+			// 忽略发送错误
 		}
 	}
 }

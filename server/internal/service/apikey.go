@@ -9,7 +9,6 @@ import (
 	"github.com/hang666/EasyUKey/sdk/request"
 	"github.com/hang666/EasyUKey/server/internal/global"
 	"github.com/hang666/EasyUKey/server/internal/model/entity"
-	"github.com/hang666/EasyUKey/shared/pkg/logger"
 )
 
 // CreateAPIKey 创建API密钥
@@ -44,10 +43,6 @@ func CreateAPIKey(req *request.CreateAPIKeyRequest) (*entity.APIKey, error) {
 	if err := global.DB.Create(&key).Error; err != nil {
 		return nil, fmt.Errorf("创建API密钥失败: %w", err)
 	}
-
-	logger.Logger.Info("创建API密钥",
-		"api_key_id", key.ID,
-		"name", key.Name)
 
 	return &key, nil
 }

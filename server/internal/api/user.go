@@ -10,7 +10,6 @@ import (
 	"github.com/hang666/EasyUKey/sdk/response"
 	"github.com/hang666/EasyUKey/server/internal/service"
 	"github.com/hang666/EasyUKey/shared/pkg/errs"
-	"github.com/hang666/EasyUKey/shared/pkg/logger"
 )
 
 // CreateUser 创建用户
@@ -26,7 +25,6 @@ func CreateUser(c echo.Context) error {
 
 	user, err := service.CreateUser(&req)
 	if err != nil {
-		logger.Logger.Error("创建用户失败", "error", err, "username", req.Username)
 		return err
 	}
 
@@ -46,7 +44,6 @@ func GetUser(c echo.Context) error {
 
 	user, err := service.GetUser(userID)
 	if err != nil {
-		logger.Logger.Error("获取用户失败", "error", err, "user_id", userID)
 		return err
 	}
 
@@ -71,7 +68,6 @@ func GetUsers(c echo.Context) error {
 
 	users, total, err := service.GetUsers(page, pageSize)
 	if err != nil {
-		logger.Logger.Error("获取用户列表失败", "error", err)
 		return err
 	}
 
@@ -97,7 +93,6 @@ func UpdateUser(c echo.Context) error {
 
 	user, err := service.UpdateUser(userID, &req)
 	if err != nil {
-		logger.Logger.Error("更新用户失败", "error", err, "user_id", userID)
 		return err
 	}
 
@@ -112,7 +107,6 @@ func DeleteUser(c echo.Context) error {
 	}
 
 	if err := service.DeleteUser(userID); err != nil {
-		logger.Logger.Error("删除用户失败", "error", err, "user_id", userID)
 		return err
 	}
 
@@ -126,7 +120,6 @@ func GetUserDevices(c echo.Context) error {
 
 	devices, err := service.GetUserDevices(username)
 	if err != nil {
-		logger.Logger.Error("获取用户设备列表失败", "error", err, "username", username)
 		return err
 	}
 

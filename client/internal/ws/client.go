@@ -57,7 +57,6 @@ func Connect() error {
 
 	setConnected(true)
 	handshakeStatus = messages.HandshakeStatusPending
-	logger.Logger.Info("WebSocket连接成功")
 
 	// 启动消息监听
 	go processMessages()
@@ -67,7 +66,6 @@ func Connect() error {
 
 	// 首先进行密钥协商
 	if err := SendKeyExchangeRequest(); err != nil {
-		logger.Logger.Error("发送密钥协商请求失败", "error", err)
 		return err
 	}
 
@@ -86,15 +84,11 @@ func Connect() error {
 		return errs.ErrKeyExchangeTimeout
 	}
 
-	logger.Logger.Info("密钥协商完成，发送设备请求")
-
 	// 根据设备初始化状态发送对应请求
 	if !isDeviceInitialized {
 		// 显示PIN设置页面
 		if err := confirmation.ShowPINSetupPage(); err != nil {
 			logger.Logger.Error("显示PIN设置页面失败", "error", err)
-		} else {
-			logger.Logger.Info("已打开PIN设置页面，等待用户设置PIN")
 		}
 		err = SendDeviceInitRequest()
 	} else {
@@ -123,11 +117,8 @@ func Disconnect() {
 		conn = nil
 	}
 
-	// 仅在先前已连接的情况下设置为断开连接。
-	// 这样可以避免在多次关闭调用时产生垃圾日志。
 	if isConnected {
 		setConnected(false)
-		logger.Logger.Info("WebSocket连接已断开")
 	}
 }
 
@@ -138,7 +129,6 @@ func MonitorConnection() {
 
 	for range ticker.C {
 		if !IsConnected() {
-			logger.Logger.Info("WebSocket已断开，尝试重新连接...")
 			if err := Connect(); err != nil {
 				logger.Logger.Error("重新连接WebSocket失败", "error", err)
 			}
@@ -168,10 +158,7 @@ func heartbeat() {
 		}
 
 		if err := SendPingMessage(); err != nil {
-			logger.Logger.Warn("发送心跳失败", "error", err)
 			// 发送失败不代表连接一定断了，MonitorConnection会处理重连
-		} else {
-			logger.Logger.Debug("心跳发送成功")
 		}
 	}
 }

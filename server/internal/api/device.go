@@ -9,7 +9,6 @@ import (
 	"github.com/hang666/EasyUKey/sdk/request"
 	"github.com/hang666/EasyUKey/sdk/response"
 	"github.com/hang666/EasyUKey/server/internal/service"
-	"github.com/hang666/EasyUKey/shared/pkg/logger"
 )
 
 // UpdateDevice 更新设备信息
@@ -26,7 +25,6 @@ func UpdateDevice(c echo.Context) error {
 
 	device, err := service.UpdateDevice(deviceID, &req)
 	if err != nil {
-		logger.Logger.Error("更新设备失败", "error", err, "device_id", deviceID)
 		return err
 	}
 
@@ -47,7 +45,6 @@ func LinkDeviceToUser(c echo.Context) error {
 
 	device, err := service.LinkDeviceToUser(deviceID, req.UserID)
 	if err != nil {
-		logger.Logger.Error("绑定设备失败", "error", err, "device_id", deviceID, "user_id", req.UserID)
 		return err
 	}
 
@@ -63,7 +60,6 @@ func UnlinkDeviceFromUser(c echo.Context) error {
 
 	device, err := service.UnlinkDeviceFromUser(deviceID)
 	if err != nil {
-		logger.Logger.Error("解绑设备失败", "error", err, "device_id", deviceID)
 		return err
 	}
 
@@ -79,7 +75,6 @@ func OfflineDevice(c echo.Context) error {
 
 	device, err := service.OfflineDevice(deviceID)
 	if err != nil {
-		logger.Logger.Error("设备下线失败", "error", err, "device_id", deviceID)
 		return err
 	}
 
@@ -138,7 +133,6 @@ func GetDevices(c echo.Context) error {
 
 	devices, total, err := service.GetDevices(page, pageSize, filter)
 	if err != nil {
-		logger.Logger.Error("获取设备列表失败", "error", err)
 		return err
 	}
 
@@ -154,7 +148,6 @@ func GetDevice(c echo.Context) error {
 
 	device, err := service.GetDeviceDetail(deviceID)
 	if err != nil {
-		logger.Logger.Error("获取设备详情失败", "error", err, "device_id", deviceID)
 		return err
 	}
 
@@ -165,7 +158,6 @@ func GetDevice(c echo.Context) error {
 func GetDeviceStatistics(c echo.Context) error {
 	totalDevices, onlineDevices, activeDevices, boundDevices, err := service.GetDeviceStatistics()
 	if err != nil {
-		logger.Logger.Error("获取设备统计失败", "error", err)
 		return err
 	}
 

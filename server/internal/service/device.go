@@ -62,11 +62,6 @@ func InitDevice(initReq *messages.DeviceInitRequestMessage) (string, string, err
 		return "", "", fmt.Errorf("创建设备记录失败: %w", err)
 	}
 
-	logger.Logger.Info("设备初始化成功",
-		"device_id", device.ID,
-		"serial_number", initReq.SerialNumber,
-		"volume_serial_number", initReq.VolumeSerialNumber)
-
 	return onceKey, totpSecret, nil
 }
 
@@ -129,11 +124,6 @@ func UpdateDevice(deviceID uint, req *request.UpdateDeviceRequest) (*entity.Devi
 		if err := global.DB.Model(&device).Updates(updates).Error; err != nil {
 			return nil, fmt.Errorf("更新设备失败: %w", err)
 		}
-
-		logger.Logger.Info("更新设备信息",
-			"device_id", device.ID,
-			"serial_number", device.SerialNumber,
-			"updates", updates)
 	}
 
 	// 重新查询更新后的设备信息
@@ -184,12 +174,6 @@ func LinkDeviceToUser(deviceID uint, userID uint) (*entity.Device, error) {
 		return nil, fmt.Errorf("绑定设备失败: %w", err)
 	}
 
-	logger.Logger.Info("绑定设备到用户",
-		"device_id", device.ID,
-		"serial_number", device.SerialNumber,
-		"user_id", userID,
-		"username", user.Username)
-
 	// 更新Hub中设备的用户归属
 	if hub := GetWSHub(); hub != nil {
 		if err := hub.LinkDeviceToUser(deviceID, userID); err != nil {
@@ -226,10 +210,9 @@ func UnlinkDeviceFromUser(deviceID uint) (*entity.Device, error) {
 		return nil, fmt.Errorf("设备未绑定用户")
 	}
 
-	// 记录解绑前的用户信息
-	var username string
+	// 记录解绑前的用户信息（用于日志记录）
 	if device.User != nil {
-		username = device.User.Username
+		_ = device.User.Username // 记录用户名但暂时不使用
 	}
 
 	// 强制断开设备的WebSocket连接
@@ -246,12 +229,6 @@ func UnlinkDeviceFromUser(deviceID uint) (*entity.Device, error) {
 	if err := global.DB.Model(&device).Select("user_id", "is_active").Updates(updates).Error; err != nil {
 		return nil, fmt.Errorf("解绑设备失败: %w", err)
 	}
-
-	logger.Logger.Info("解绑设备与用户",
-		"device_id", device.ID,
-		"serial_number", device.SerialNumber,
-		"user_id", device.UserID,
-		"username", username)
 
 	// 重新查询更新后的设备信息
 	global.DB.Preload("User").Where("id = ?", deviceID).First(&device)
@@ -280,10 +257,6 @@ func OfflineDevice(deviceID uint) (*entity.Device, error) {
 	if hub := GetWSHub(); hub != nil {
 		hub.OnDeviceDisconnect(deviceID)
 	}
-
-	logger.Logger.Info("管理员手动设置设备下线",
-		"device_id", device.ID,
-		"serial_number", device.SerialNumber)
 
 	// 重新查询更新后的设备信息
 	global.DB.Preload("User").Where("id = ?", deviceID).First(&device)
@@ -449,10 +422,6 @@ func UpdateDeviceOnceKey(deviceID uint, oldOnceKey string) (string, error) {
 	if err := global.DB.Model(&device).Updates(updates).Error; err != nil {
 		return "", fmt.Errorf("更新设备OnceKey失败: %w", err)
 	}
-
-	logger.Logger.Info("更新设备OnceKey",
-		"device_id", deviceID,
-		"serial_number", device.SerialNumber)
 
 	return newOnceKey, nil
 }

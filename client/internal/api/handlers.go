@@ -104,7 +104,6 @@ func HandleConfirmAction(c echo.Context) error {
 			Timestamp: time.Now(),
 		}
 		confirmation.SendConfirmation(confirmResult)
-		logger.Logger.Info("用户拒绝认证", "requestID", request.ID)
 
 		return c.JSON(http.StatusOK, ConfirmActionResponse{
 			Message:       "认证已拒绝",
@@ -137,7 +136,6 @@ func HandleConfirmAction(c echo.Context) error {
 
 	// 发送确认结果
 	confirmation.SendConfirmation(confirmResult)
-	logger.Logger.Info("用户确认认证，等待WebSocket处理结果", "requestID", request.ID)
 
 	// 等待WebSocket认证结果
 	result, err := confirmation.WaitForResult(60 * time.Second)
@@ -155,8 +153,6 @@ func HandleConfirmAction(c echo.Context) error {
 	if !result.Success {
 		status = ConfirmActionStatusError
 	}
-
-	logger.Logger.Info("认证结果已返回", "requestID", request.ID, "success", result.Success, "message", result.Message)
 
 	return c.JSON(http.StatusOK, ConfirmActionResponse{
 		Message:       result.Message,

@@ -17,18 +17,14 @@ import (
 
 // handleAuthRequest 处理来自服务端的认证请求
 func handleAuthRequest(message messages.WSMessage) {
-	logger.Logger.Info("收到认证请求")
-
 	// 解析认证请求数据
 	dataBytes, err := json.Marshal(message.Data)
 	if err != nil {
-		logger.Logger.Error("解析认证请求数据失败", "error", err)
 		return
 	}
 
 	var authReq messages.AuthRequestMessage
 	if err := json.Unmarshal(dataBytes, &authReq); err != nil {
-		logger.Logger.Error("反序列化认证请求失败", "error", err)
 		return
 	}
 
@@ -51,7 +47,6 @@ func handleAuthRequest(message messages.WSMessage) {
 
 	// 显示确认页面，调用confirmation包
 	if err := confirmation.ShowAuthRequest(request); err != nil {
-		logger.Logger.Error("显示认证页面失败", "error", err)
 		SendAuthResponse(authReq.RequestID, false, "", "", "", "", errs.ErrShowPageFailed.Error())
 		return
 	}
@@ -60,21 +55,16 @@ func handleAuthRequest(message messages.WSMessage) {
 	timeout := time.Duration(authReq.Timeout) * time.Second
 	confirmResult, err := confirmation.WaitForConfirmation(timeout)
 	if err != nil {
-		logger.Logger.Error("等待用户确认失败", "error", err)
 		confirmation.SendResult(false, "认证超时")
 		SendAuthResponse(authReq.RequestID, false, "", "", dev.SerialNumber, dev.VolumeSerialNumber, errs.ErrWaitConfirmFailed.Error())
 		return
 	}
 
 	if !confirmResult.Confirmed {
-		logger.Logger.Info("用户拒绝认证")
 		confirmation.SendResult(false, "用户拒绝认证")
 		SendAuthResponse(authReq.RequestID, false, "", "", dev.SerialNumber, dev.VolumeSerialNumber, errs.ErrUserRejected.Error())
 		return
 	}
-
-	// 用户确认，需要等待PIN输入
-	logger.Logger.Info("用户确认认证，等待PIN输入")
 
 	// 等待PIN输入
 	pin, err := global.PinManager.WaitPIN()
@@ -105,7 +95,6 @@ func handleAuthRequest(message messages.WSMessage) {
 	// 保存PIN以供后续更新OnceKey使用
 	global.PinManager.SendPIN(pin)
 
-	logger.Logger.Info("认证成功，发送认证响应")
 	SendAuthResponse(authReq.RequestID, true, authKey, currentOnceKey, dev.SerialNumber, dev.VolumeSerialNumber, "")
 
 	// 通知HTTP API认证成功
@@ -114,16 +103,13 @@ func handleAuthRequest(message messages.WSMessage) {
 
 // handleDeviceInitResponse 处理设备初始化响应
 func handleDeviceInitResponse(message messages.WSMessage) {
-	logger.Logger.Info("收到设备初始化响应")
 	dataBytes, err := json.Marshal(message.Data)
 	if err != nil {
-		logger.Logger.Error("序列化设备初始化响应失败", "error", err)
 		return
 	}
 	var resp messages.DeviceInitResponseMessage
 	err = json.Unmarshal(dataBytes, &resp)
 	if err != nil {
-		logger.Logger.Error("反序列化设备初始化响应失败", "error", err)
 		return
 	}
 
@@ -144,26 +130,21 @@ func handleDeviceInitResponse(message messages.WSMessage) {
 	}
 
 	isDeviceInitialized = true
-	logger.Logger.Info("设备初始化成功并已保存密钥")
 }
 
 // handleAuthSuccessResponse 处理认证成功后服务端返回的新OnceKey
 func handleAuthSuccessResponse(message messages.WSMessage) {
-	logger.Logger.Info("收到认证成功响应，准备更新OnceKey")
 	dataBytes, err := json.Marshal(message.Data)
 	if err != nil {
-		logger.Logger.Error("序列化认证成功响应失败", "error", err)
 		return
 	}
 	var resp messages.AuthSuccessResponseMessage
 	err = json.Unmarshal(dataBytes, &resp)
 	if err != nil {
-		logger.Logger.Error("反序列化认证成功响应失败", "error", err)
 		return
 	}
 
 	if !resp.Success {
-		logger.Logger.Error("服务端更新OnceKey失败", "error", resp.Error)
 		SendOnceKeyUpdateConfirm(resp.RequestID, false, "客户端收到错误响应")
 		return
 	}
@@ -182,19 +163,16 @@ func handleAuthSuccessResponse(message messages.WSMessage) {
 		return
 	}
 
-	logger.Logger.Info("成功更新OnceKey")
 	SendOnceKeyUpdateConfirm(resp.RequestID, true, "")
 }
 
 // handlePing 处理心跳请求
 func handlePing() {
-	logger.Logger.Debug("收到Ping, 发送Pong")
 	SendPongMessage()
 }
 
 // handleDeviceStatusCheck 处理设备状态检查请求
 func handleDeviceStatusCheck() {
-	logger.Logger.Info("收到设备状态检查请求")
 	var status string
 	var serialNumber string
 	var volumeSerialNumber string
@@ -211,18 +189,14 @@ func handleDeviceStatusCheck() {
 
 // handleForceLogout 处理强制下线消息
 func handleForceLogout(message messages.WSMessage) {
-	logger.Logger.Info("收到强制下线消息")
-
 	// 解析强制下线消息数据
 	dataBytes, err := json.Marshal(message.Data)
 	if err != nil {
-		logger.Logger.Error("解析强制下线消息数据失败", "error", err)
 		return
 	}
 
 	var forceLogoutMsg messages.ForceLogoutMessage
 	if err := json.Unmarshal(dataBytes, &forceLogoutMsg); err != nil {
-		logger.Logger.Error("反序列化强制下线消息失败", "error", err)
 		return
 	}
 
@@ -232,19 +206,15 @@ func handleForceLogout(message messages.WSMessage) {
 
 // handleKeyExchangeResponse 处理密钥交换响应
 func handleKeyExchangeResponse(message messages.WSMessage) {
-	logger.Logger.Info("收到密钥交换响应")
-
 	// 解析密钥交换响应数据
 	dataBytes, err := json.Marshal(message.Data)
 	if err != nil {
-		logger.Logger.Error("解析密钥交换响应数据失败", "error", err)
 		handshakeStatus = messages.HandshakeStatusFailed
 		return
 	}
 
 	var keyExchResp messages.KeyExchangeResponseMessage
 	if err := json.Unmarshal(dataBytes, &keyExchResp); err != nil {
-		logger.Logger.Error("反序列化密钥交换响应失败", "error", err)
 		handshakeStatus = messages.HandshakeStatusFailed
 		return
 	}
@@ -273,33 +243,27 @@ func handleKeyExchangeResponse(message messages.WSMessage) {
 	// 更新全局状态
 	encryptor = enc
 	handshakeStatus = messages.HandshakeStatusCompleted
-
-	logger.Logger.Info("客户端密钥交换完成")
 }
 
 // handleEncryptedMessage 处理加密消息
 func handleEncryptedMessage(message messages.WSMessage) {
 	// 检查握手状态
 	if handshakeStatus != messages.HandshakeStatusCompleted {
-		logger.Logger.Error("收到加密消息但握手未完成")
 		return
 	}
 
 	if encryptor == nil {
-		logger.Logger.Error("收到加密消息但加密器未初始化")
 		return
 	}
 
 	// 解析加密消息数据
 	dataBytes, err := json.Marshal(message.Data)
 	if err != nil {
-		logger.Logger.Error("解析加密消息数据失败", "error", err)
 		return
 	}
 
 	var encryptedMsg messages.EncryptedMessage
 	if err := json.Unmarshal(dataBytes, &encryptedMsg); err != nil {
-		logger.Logger.Error("反序列化加密消息失败", "error", err)
 		return
 	}
 
@@ -313,7 +277,6 @@ func handleEncryptedMessage(message messages.WSMessage) {
 	// 解析解密后的消息
 	var decryptedMsg messages.WSMessage
 	if err := json.Unmarshal(decryptedData, &decryptedMsg); err != nil {
-		logger.Logger.Error("解析解密后的消息失败", "error", err)
 		return
 	}
 

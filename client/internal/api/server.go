@@ -44,7 +44,6 @@ func StartHttpServer(port int, templateFS embed.FS) error {
 
 	httpServer = e
 
-	logger.Logger.Info("HTTP服务器启动", "port", port)
 	return httpServer.Start(fmt.Sprintf("localhost:%d", port))
 }
 
@@ -54,6 +53,5 @@ func StopHttpServer() {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		_ = httpServer.Shutdown(ctx)
-		logger.Logger.Info("HTTP服务器已停止")
 	}
 }

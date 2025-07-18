@@ -11,7 +11,6 @@ import (
 	"github.com/hang666/EasyUKey/server/internal/global"
 	"github.com/hang666/EasyUKey/server/internal/model/entity"
 	"github.com/hang666/EasyUKey/shared/pkg/errs"
-	"github.com/hang666/EasyUKey/shared/pkg/logger"
 )
 
 // CreateUser 创建用户
@@ -33,10 +32,6 @@ func CreateUser(req *request.CreateUserRequest) (*entity.User, error) {
 	if err := global.DB.Create(&user).Error; err != nil {
 		return nil, fmt.Errorf("创建用户失败: %w", err)
 	}
-
-	logger.Logger.Info("创建用户",
-		"user_id", user.ID,
-		"username", user.Username)
 
 	return &user, nil
 }
@@ -137,11 +132,6 @@ func UpdateUser(userID uint, req *request.UpdateUserRequest) (*entity.User, erro
 		if err := global.DB.Model(&user).Updates(updates).Error; err != nil {
 			return nil, fmt.Errorf("更新用户失败: %w", err)
 		}
-
-		logger.Logger.Info("更新用户信息",
-			"user_id", user.ID,
-			"username", user.Username,
-			"updates", updates)
 	}
 
 	// 重新查询更新后的用户信息
@@ -173,10 +163,6 @@ func DeleteUser(userID uint) error {
 	if err := global.DB.Delete(&user).Error; err != nil {
 		return fmt.Errorf("删除用户失败: %w", err)
 	}
-
-	logger.Logger.Info("删除用户",
-		"user_id", user.ID,
-		"username", user.Username)
 
 	return nil
 }

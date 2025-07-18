@@ -18,14 +18,12 @@ import (
 func handleDeviceRegister(client *Client, wsMsg *messages.WSMessage) error {
 	// 验证消息
 	if err := wsutil.ValidateMessage(wsMsg); err != nil {
-		logger.Logger.Error("处理device_register消息失败", "error", err, "user_id", client.UserID, "device_id", client.DeviceID)
 		return sendErrorToClient(client, "device_register", "validation_error", errs.ErrWSValidation.Error())
 	}
 
 	// 解析注册消息
 	regMsg, err := wsutil.ParseMessage[messages.DeviceRegistrationMessage](wsMsg)
 	if err != nil {
-		logger.Logger.Error("处理device_register消息失败", "error", err, "user_id", client.UserID, "device_id", client.DeviceID)
 		return sendErrorToClient(client, "device_register", "parse_error", fmt.Sprintf("解析错误: %s", err.Error()))
 	}
 
@@ -40,7 +38,7 @@ func handleDeviceRegister(client *Client, wsMsg *messages.WSMessage) error {
 		First(&device)
 
 	if result.Error != nil {
-		logger.Logger.Error("处理device_register消息失败", "error", result.Error, "user_id", client.UserID, "device_id", client.DeviceID, "serial_number", regMsg.SerialNumber, "volume_serial_number", regMsg.VolumeSerialNumber)
+		logger.Logger.Error("设备注册失败", "error", result.Error, "serial_number", regMsg.SerialNumber)
 		return sendErrorToClient(client, "device_register", "device_not_found", errs.ErrDeviceNotFoundClient.Error())
 	}
 
@@ -62,8 +60,6 @@ func handleDeviceRegister(client *Client, wsMsg *messages.WSMessage) error {
 		}
 	}
 
-	logger.Logger.Info("device_register: 设备注册成功", "user_id", client.UserID, "device_id", client.DeviceID, "serial_number", regMsg.SerialNumber)
-
 	return nil
 }
 
@@ -72,7 +68,6 @@ func handleDeviceInit(client *Client, wsMsg *messages.WSMessage) error {
 	// 解析初始化请求
 	initMsg, err := wsutil.ParseMessage[messages.DeviceInitRequestMessage](wsMsg)
 	if err != nil {
-		logger.Logger.Error("处理device_init_request消息失败", "error", err, "user_id", client.UserID, "device_id", client.DeviceID)
 		return err
 	}
 
@@ -82,7 +77,7 @@ func handleDeviceInit(client *Client, wsMsg *messages.WSMessage) error {
 	// 构造响应
 	var initResp *messages.DeviceInitResponseMessage
 	if err != nil {
-		logger.Logger.Error("处理device_init_request消息失败", "error", err, "user_id", client.UserID, "device_id", client.DeviceID, "serial_number", initMsg.SerialNumber, "volume_serial_number", initMsg.VolumeSerialNumber)
+		logger.Logger.Error("设备初始化失败", "error", err, "serial_number", initMsg.SerialNumber)
 		initResp = &messages.DeviceInitResponseMessage{
 			Success: false,
 			Error:   err.Error(),
@@ -99,7 +94,6 @@ func handleDeviceInit(client *Client, wsMsg *messages.WSMessage) error {
 
 	// 发送初始化响应
 	if err := sendMessageToClient(client, "device_init_response", initResp); err != nil {
-		logger.Logger.Error("处理device_init_request消息失败", "error", err, "user_id", client.UserID, "device_id", client.DeviceID)
 		return err
 	}
 
@@ -127,8 +121,6 @@ func handleDeviceInit(client *Client, wsMsg *messages.WSMessage) error {
 		}
 	}
 
-	logger.Logger.Info("device_init_request: 已处理设备初始化请求", "user_id", client.UserID, "device_id", client.DeviceID, "serial_number", initMsg.SerialNumber, "success", initResp.Success)
-
 	return nil
 }
 
@@ -137,13 +129,11 @@ func handleAuthResponse(client *Client, wsMsg *messages.WSMessage) error {
 	// 解析认证响应
 	authResp, err := wsutil.ParseMessage[messages.AuthResponseMessage](wsMsg)
 	if err != nil {
-		logger.Logger.Error("处理auth_response消息失败", "error", err, "user_id", client.UserID, "device_id", client.DeviceID)
 		return err
 	}
 
 	// 处理认证响应
 	if err := service.ProcessAuthResponse(authResp.RequestID, &authResp); err != nil {
-		logger.Logger.Error("处理auth_response消息失败", "error", err, "user_id", client.UserID, "device_id", client.DeviceID, "request_id", authResp.RequestID, "success", authResp.Success)
 		return err
 	}
 
@@ -151,7 +141,6 @@ func handleAuthResponse(client *Client, wsMsg *messages.WSMessage) error {
 	if authResp.Success && authResp.UsedKey != "" {
 		newOnceKey, err := service.UpdateDeviceOnceKey(client.DeviceID, authResp.UsedKey)
 		if err != nil {
-			logger.Logger.Error("处理auth_response消息失败", "error", err, "user_id", client.UserID, "device_id", client.DeviceID, "request_id", authResp.RequestID, "device_id", client.DeviceID)
 			// 这里不返回错误，因为认证已经成功，OnceKey更新失败不应该影响认证结果
 		} else {
 			// 发送新的OnceKey给客户端
@@ -162,16 +151,10 @@ func handleAuthResponse(client *Client, wsMsg *messages.WSMessage) error {
 			}
 
 			if err := sendMessageToClient(client, "auth_success_response", successResp); err != nil {
-				logger.Logger.Error("处理auth_response消息失败", "error", err, "user_id", client.UserID, "device_id", client.DeviceID, "request_id", authResp.RequestID, "device_id", client.DeviceID)
+				// 忽略发送错误
 			}
 		}
 	}
-
-	logger.Logger.Info("处理认证响应完成",
-		"request_id", authResp.RequestID,
-		"success", authResp.Success,
-		"user_id", client.UserID,
-		"device_id", client.DeviceID)
 
 	return nil
 }
@@ -186,17 +169,8 @@ func handleOnceKeyUpdate(client *Client, wsMsg *messages.WSMessage) error {
 	}
 
 	// 记录OnceKey更新确认
-	if confirmMsg.Success {
-		logger.Logger.Info("OnceKey更新确认成功",
-			"request_id", confirmMsg.RequestID,
-			"user_id", client.UserID,
-			"device_id", client.DeviceID)
-	} else {
-		logger.Logger.Error("OnceKey更新确认失败",
-			"error", confirmMsg.Error,
-			"request_id", confirmMsg.RequestID,
-			"user_id", client.UserID,
-			"device_id", client.DeviceID)
+	if !confirmMsg.Success {
+		logger.Logger.Error("OnceKey更新确认失败", "request_id", confirmMsg.RequestID, "error", confirmMsg.Error)
 	}
 
 	return nil
@@ -205,13 +179,10 @@ func handleOnceKeyUpdate(client *Client, wsMsg *messages.WSMessage) error {
 // handleDeviceStatus 处理设备状态响应
 func handleDeviceStatus(client *Client, wsMsg *messages.WSMessage) error {
 	// 解析状态响应
-	statusMsg, err := wsutil.ParseMessage[messages.DeviceStatusMessage](wsMsg)
+	_, err := wsutil.ParseMessage[messages.DeviceStatusMessage](wsMsg)
 	if err != nil {
-		logger.Logger.Error("处理device_status_response消息失败", "error", err, "user_id", client.UserID, "device_id", client.DeviceID)
 		return err
 	}
-
-	logger.Logger.Info("device_status_response: 收到设备状态响应", "user_id", client.UserID, "device_id", client.DeviceID, "status", statusMsg.Status)
 
 	return nil
 }
@@ -250,20 +221,17 @@ func handleKeyExchangeRequest(client *Client, wsMsg *messages.WSMessage) error {
 	// 创建服务端密钥交换器
 	keyExchange, err := identity.NewKeyExchange()
 	if err != nil {
-		logger.Logger.Error("创建密钥交换器失败", "error", err, "device_id", client.DeviceID)
 		return sendErrorToClient(client, "key_exchange_response", "server_error", "服务端密钥交换器创建失败")
 	}
 
 	// 计算共享密钥
 	if err := keyExchange.ComputeSharedKey(keyExchReq.PublicKey); err != nil {
-		logger.Logger.Error("计算共享密钥失败", "error", err, "device_id", client.DeviceID)
 		return sendErrorToClient(client, "key_exchange_response", "compute_error", "共享密钥计算失败")
 	}
 
 	// 创建加密器
 	encryptor, err := keyExchange.CreateEncryptor()
 	if err != nil {
-		logger.Logger.Error("创建加密器失败", "error", err, "device_id", client.DeviceID)
 		return sendErrorToClient(client, "key_exchange_response", "encryptor_error", "加密器创建失败")
 	}
 
@@ -281,11 +249,9 @@ func handleKeyExchangeRequest(client *Client, wsMsg *messages.WSMessage) error {
 	}
 
 	if err := wsutil.SendMessageToChannel(client.Send, "key_exchange_response", keyExchResp); err != nil {
-		logger.Logger.Error("发送密钥交换响应失败", "error", err, "device_id", client.DeviceID)
 		return err
 	}
 
-	logger.Logger.Info("密钥交换成功", "device_id", client.DeviceID)
 	return nil
 }
 
@@ -303,14 +269,12 @@ func handleEncryptedMessage(client *Client, wsMsg *messages.WSMessage) error {
 	}
 
 	if encryptor == nil {
-		logger.Logger.Error("收到加密消息但加密器未初始化", "device_id", client.DeviceID)
 		return sendErrorToClient(client, "encrypted", "encryptor_error", "加密器未初始化")
 	}
 
 	// 解析加密消息
 	encryptedMsg, err := wsutil.ParseMessage[messages.EncryptedMessage](wsMsg)
 	if err != nil {
-		logger.Logger.Error("解析加密消息失败", "error", err, "device_id", client.DeviceID)
 		return sendErrorToClient(client, "encrypted", "parse_error", "加密消息解析失败")
 	}
 
@@ -324,7 +288,6 @@ func handleEncryptedMessage(client *Client, wsMsg *messages.WSMessage) error {
 	// 解析解密后的消息
 	var decryptedWSMsg messages.WSMessage
 	if err := json.Unmarshal(decryptedData, &decryptedWSMsg); err != nil {
-		logger.Logger.Error("解析解密后的消息失败", "error", err, "device_id", client.DeviceID)
 		return sendErrorToClient(client, "encrypted", "unmarshal_error", "解密后消息解析失败")
 	}
 
@@ -341,12 +304,10 @@ func sendEncryptedMessage(client *Client, msgType string, data interface{}) erro
 
 	// 检查握手状态
 	if handshakeStatus != messages.HandshakeStatusCompleted {
-		logger.Logger.Error("尝试发送加密消息但握手未完成", "device_id", client.DeviceID)
 		return fmt.Errorf("握手未完成")
 	}
 
 	if encryptor == nil {
-		logger.Logger.Error("尝试发送加密消息但加密器未初始化", "device_id", client.DeviceID)
 		return fmt.Errorf("加密器未初始化")
 	}
 
@@ -360,14 +321,12 @@ func sendEncryptedMessage(client *Client, msgType string, data interface{}) erro
 	// 序列化原始消息
 	originalData, err := json.Marshal(originalMsg)
 	if err != nil {
-		logger.Logger.Error("序列化原始消息失败", "error", err, "device_id", client.DeviceID)
 		return err
 	}
 
 	// 加密消息
 	encryptedPayload, nonce, err := encryptor.EncryptMessage(originalData)
 	if err != nil {
-		logger.Logger.Error("加密消息失败", "error", err, "device_id", client.DeviceID)
 		return err
 	}
 

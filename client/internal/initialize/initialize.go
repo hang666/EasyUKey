@@ -21,13 +21,7 @@ func InitAll(encryptKeyStr, serverAddr, logLevel, logFile, logConsole, devMode s
 		return err
 	}
 
-	logger.Logger.Info(
-		"客户端初始化完成",
-		"version", cfg.Version,
-		"server_addr", cfg.ServerAddr,
-		"log_level", cfg.LogLevel,
-		"dev_mode", devMode,
-	)
+	logger.Logger.Info("客户端初始化完成")
 
 	return nil
 }

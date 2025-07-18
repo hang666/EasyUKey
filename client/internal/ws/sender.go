@@ -45,14 +45,12 @@ func sendEncryptedMessage(msgType string, data interface{}) error {
 	// 序列化原始消息
 	originalData, err := json.Marshal(originalMsg)
 	if err != nil {
-		logger.Logger.Error("序列化原始消息失败", "error", err)
 		return err
 	}
 
 	// 加密消息
 	encryptedPayload, nonce, err := encryptor.EncryptMessage(originalData)
 	if err != nil {
-		logger.Logger.Error("加密消息失败", "error", err)
 		return err
 	}
 
@@ -99,7 +97,6 @@ func SendDeviceInitRequest() error {
 		Model:              dev.Model,
 	}
 
-	logger.Logger.Info("发送设备初始化请求", "device_id", dev.SerialNumber)
 	return sendWSMessage("device_init_request", initRequest)
 }
 
@@ -122,11 +119,7 @@ func SendAuthResponse(requestID string, success bool, authKey string, usedOnceKe
 
 // SendPingMessage 发送心跳
 func SendPingMessage() error {
-	if err := sendWSMessage("ping", nil); err != nil {
-		logger.Logger.Warn("发送心跳失败", "error", err)
-		return err
-	}
-	return nil
+	return sendWSMessage("ping", nil)
 }
 
 // SendOnceKeyUpdateConfirm 发送一次性密钥更新确认
@@ -144,9 +137,7 @@ func SendOnceKeyUpdateConfirm(requestID string, success bool, errorMsg string) {
 
 // SendPongMessage 回复心跳
 func SendPongMessage() {
-	if err := sendWSMessage("pong", nil); err != nil {
-		logger.Logger.Warn("回复心跳失败", "error", err)
-	}
+	sendWSMessage("pong", nil)
 }
 
 // SendDeviceStatusResponse 发送设备状态响应
@@ -167,7 +158,6 @@ func SendKeyExchangeRequest() error {
 	// 创建密钥交换器
 	kx, err := identity.NewKeyExchange()
 	if err != nil {
-		logger.Logger.Error("创建密钥交换器失败", "error", err)
 		return err
 	}
 
@@ -179,7 +169,6 @@ func SendKeyExchangeRequest() error {
 		PublicKey: kx.GetPublicKeyBase64(),
 	}
 
-	logger.Logger.Info("发送密钥交换请求")
 	// 密钥交换请求不能加密，必须直接发送
 	mu.Lock()
 	defer mu.Unlock()

@@ -10,7 +10,6 @@ import (
 	"github.com/hang666/EasyUKey/server/internal/model/entity"
 	"github.com/hang666/EasyUKey/server/internal/service"
 	"github.com/hang666/EasyUKey/shared/pkg/errs"
-	"github.com/hang666/EasyUKey/shared/pkg/logger"
 )
 
 // StartAuth 发起用户认证
@@ -33,7 +32,6 @@ func StartAuth(c echo.Context) error {
 
 	session, err := service.StartAuth(&req, apiKey)
 	if err != nil {
-		logger.Logger.Error("发起认证失败", "error", err, "username", username)
 		return err
 	}
 
@@ -63,7 +61,6 @@ func VerifyAuth(c echo.Context) error {
 
 	session, err := service.VerifyAuth(&req)
 	if err != nil {
-		logger.Logger.Error("验证认证失败", "error", err, "session_id", req.SessionID)
 		return err
 	}
 

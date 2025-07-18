@@ -10,7 +10,6 @@ import (
 	"github.com/hang666/EasyUKey/sdk/response"
 	"github.com/hang666/EasyUKey/server/internal/service"
 	"github.com/hang666/EasyUKey/shared/pkg/errs"
-	"github.com/hang666/EasyUKey/shared/pkg/logger"
 )
 
 // CreateAPIKey 创建API密钥
@@ -26,7 +25,6 @@ func CreateAPIKey(c echo.Context) error {
 
 	apiKey, err := service.CreateAPIKey(&req)
 	if err != nil {
-		logger.Logger.Error("创建API密钥失败", "error", err, "name", req.Name)
 		return err
 	}
 
@@ -47,7 +45,6 @@ func GetAPIKeys(c echo.Context) error {
 
 	apiKeys, total, err := service.GetAPIKeys(page, pageSize)
 	if err != nil {
-		logger.Logger.Error("获取API密钥列表失败", "error", err)
 		return err
 	}
 

@@ -116,11 +116,7 @@ func (h *Hub) registerClient(client *Client) {
 	// 检查单一会话策略
 	if client.UserID > 0 {
 		if existingClient, exists := h.userClients[client.UserID]; exists {
-			logger.Logger.Error("用户重复连接",
-				"user_id", client.UserID,
-				"existing_device_id", existingClient.DeviceID,
-				"new_device_id", client.DeviceID)
-
+			logger.Logger.Error("用户重复连接", "user_id", client.UserID, "new_device_id", client.DeviceID)
 			// 强制关闭现有连接
 			h.forceCloseClient(existingClient)
 		}
@@ -136,11 +132,6 @@ func (h *Hub) registerClient(client *Client) {
 	}
 
 	h.clients[client] = true
-
-	logger.Logger.Info("客户端已注册",
-		"user_id", client.UserID,
-		"device_id", client.DeviceID,
-		"serial_number", client.SerialNumber)
 }
 
 // unregisterClient 注销客户端
@@ -213,10 +204,6 @@ func (h *Hub) forceCloseClient(client *Client) {
 	go func() {
 		h.unregister <- client
 	}()
-
-	logger.Logger.Info("强制关闭客户端连接",
-		"user_id", client.UserID,
-		"device_id", client.DeviceID)
 }
 
 // broadcastMessage 广播消息

@@ -55,7 +55,6 @@ func StartTimer(exeDir string) {
 		case <-ticker.C:
 			CheckDevice(exeDir)
 		case <-doneChan:
-			logger.Logger.Info("设备检查定时器已停止")
 			return
 		}
 	}
