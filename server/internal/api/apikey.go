@@ -9,7 +9,7 @@ import (
 	"github.com/hang666/EasyUKey/sdk/request"
 	"github.com/hang666/EasyUKey/sdk/response"
 	"github.com/hang666/EasyUKey/server/internal/service"
-	"github.com/hang666/EasyUKey/shared/pkg/errors"
+	"github.com/hang666/EasyUKey/shared/pkg/errs"
 	"github.com/hang666/EasyUKey/shared/pkg/logger"
 )
 
@@ -21,7 +21,7 @@ func CreateAPIKey(c echo.Context) error {
 	}
 
 	if req.Name == "" {
-		return errors.ErrMissingName
+		return errs.ErrMissingName
 	}
 
 	apiKey, err := service.CreateAPIKey(&req)

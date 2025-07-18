@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/hang666/EasyUKey/client/internal/device"
+	"github.com/hang666/EasyUKey/shared/pkg/errs"
 	"github.com/hang666/EasyUKey/shared/pkg/identity"
 	"github.com/hang666/EasyUKey/shared/pkg/logger"
 	"github.com/hang666/EasyUKey/shared/pkg/messages"
@@ -17,7 +18,7 @@ func sendWSMessage(msgType string, data interface{}) error {
 	defer mu.Unlock()
 
 	if conn == nil {
-		return errNotConnected
+		return errs.ErrWSNotConnected
 	}
 
 	// 检查是否需要加密
@@ -31,7 +32,7 @@ func sendWSMessage(msgType string, data interface{}) error {
 // sendEncryptedMessage 发送加密消息
 func sendEncryptedMessage(msgType string, data interface{}) error {
 	if encryptor == nil {
-		return errNotConnected
+		return errs.ErrWSNotConnected
 	}
 
 	// 创建原始消息
@@ -69,7 +70,7 @@ func sendEncryptedMessage(msgType string, data interface{}) error {
 func SendDeviceRegistration() error {
 	dev := device.DeviceInfo.GetDevice()
 	if dev == nil {
-		return errDeviceNotAvailable
+		return errs.ErrDeviceNotAvailable
 	}
 
 	registration := messages.DeviceRegistrationMessage{
@@ -87,7 +88,7 @@ func SendDeviceRegistration() error {
 func SendDeviceInitRequest() error {
 	dev := device.DeviceInfo.GetDevice()
 	if dev == nil {
-		return errDeviceNotAvailable
+		return errs.ErrDeviceNotAvailable
 	}
 
 	initRequest := messages.DeviceInitRequestMessage{
@@ -183,7 +184,7 @@ func SendKeyExchangeRequest() error {
 	mu.Lock()
 	defer mu.Unlock()
 	if conn == nil {
-		return errNotConnected
+		return errs.ErrWSNotConnected
 	}
 	return wsutil.SendMessage(conn, "key_exchange_request", keyExchReq)
 }

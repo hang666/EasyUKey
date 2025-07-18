@@ -3,11 +3,12 @@ package identity
 import (
 	"crypto/md5"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/hang666/EasyUKey/shared/pkg/errs"
 )
 
 const EncryptedFileExt = ".enc"
@@ -15,7 +16,7 @@ const EncryptedFileExt = ".enc"
 // Store 使用PIN+EncryptKey加密并存储数据
 func Store(pin, encryptKey, keyType string, data []byte, basePath string) error {
 	if pin == "" || encryptKey == "" || len(data) == 0 {
-		return errors.New("PIN、EncryptKey和数据不能为空")
+		return errs.ErrPINOrKeyEmpty
 	}
 
 	os.MkdirAll(basePath, 0o700)
@@ -38,7 +39,7 @@ func Store(pin, encryptKey, keyType string, data []byte, basePath string) error 
 // Load 使用PIN+EncryptKey解密并加载数据
 func Load(pin, encryptKey, keyType string, basePath string) ([]byte, error) {
 	if pin == "" || encryptKey == "" {
-		return nil, errors.New("PIN和EncryptKey不能为空")
+		return nil, errs.ErrPINOrKeyEmpty
 	}
 
 	filename := getKeyFilePath(keyType, basePath)

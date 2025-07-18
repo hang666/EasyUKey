@@ -4,11 +4,11 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
-	"fmt"
 	"sort"
 	"strconv"
 	"strings"
 
+	"github.com/hang666/EasyUKey/shared/pkg/errs"
 	"github.com/hang666/EasyUKey/shared/pkg/messages"
 )
 
@@ -59,27 +59,27 @@ func VerifySignature(req *messages.CallbackRequest, secret string) bool {
 // ValidateCallbackRequest 验证回调请求
 func ValidateCallbackRequest(req *messages.CallbackRequest, secret string) error {
 	if req.SessionID == "" {
-		return fmt.Errorf("session_id is required")
+		return errs.ErrCallbackSessionIDMissing
 	}
 	if req.UserID == "" {
-		return fmt.Errorf("user_id is required")
+		return errs.ErrCallbackUserIDMissing
 	}
 	if req.Status == "" {
-		return fmt.Errorf("status is required")
+		return errs.ErrCallbackStatusMissing
 	}
 	if req.Challenge == "" {
-		return fmt.Errorf("challenge is required")
+		return errs.ErrCallbackChallengeMissing
 	}
 	if req.Timestamp == 0 {
-		return fmt.Errorf("timestamp is required")
+		return errs.ErrCallbackTimestampMissing
 	}
 	if req.Signature == "" {
-		return fmt.Errorf("signature is required")
+		return errs.ErrCallbackSignatureMissing
 	}
 
 	// 验证签名
 	if !VerifySignature(req, secret) {
-		return fmt.Errorf("invalid signature")
+		return errs.ErrCallbackInvalidSignature
 	}
 
 	return nil

@@ -7,9 +7,52 @@ import (
 
 	"github.com/hang666/EasyUKey/sdk/response"
 	"github.com/hang666/EasyUKey/server/internal/global"
-	"github.com/hang666/EasyUKey/shared/pkg/errors"
+	"github.com/hang666/EasyUKey/shared/pkg/errs"
 	"github.com/hang666/EasyUKey/shared/pkg/logger"
 )
+
+// httpStatusMap 错误对应的HTTP状态码映射
+var httpStatusMap = map[error]int{
+	// 400 Bad Request
+	errs.ErrInvalidRequest:      400,
+	errs.ErrMissingAPIKey:       400,
+	errs.ErrMissingChallenge:    400,
+	errs.ErrMissingSessionID:    400,
+	errs.ErrMissingUsername:     400,
+	errs.ErrMissingName:         400,
+	errs.ErrMissingDeviceInfo:   400,
+	errs.ErrMissingAdminKey:     400,
+	errs.ErrInvalidKey:          400,
+	errs.ErrInvalidDeviceID:     400,
+	errs.ErrDeviceAlreadyExists: 400,
+	errs.ErrDeviceNotActive:     400,
+	errs.ErrDeviceAlreadyBound:  400,
+	errs.ErrUserAlreadyExists:   400,
+	errs.ErrSessionExpired:      400,
+	errs.ErrSessionCompleted:    400,
+
+	// 401 Unauthorized
+	errs.ErrAPIKeyInvalid: 401,
+
+	// 403 Forbidden
+	errs.ErrPermissionDenied: 403,
+
+	// 404 Not Found
+	errs.ErrUserNotFound:    404,
+	errs.ErrDeviceNotFound:  404,
+	errs.ErrSessionNotFound: 404,
+
+	// 503 Service Unavailable
+	errs.ErrUserNotOnline: 503,
+}
+
+// getHTTPStatus 获取错误对应的HTTP状态码
+func getHTTPStatus(err error) int {
+	if status, ok := httpStatusMap[err]; ok {
+		return status
+	}
+	return 500 // 默认内部服务器错误
+}
 
 // skipper 函数用于跳过特定路由
 func skipper(c echo.Context) bool {
@@ -111,7 +154,7 @@ func LoggerMiddleware() echo.MiddlewareFunc {
 
 // ErrorHandler 自定义错误处理中间件
 func ErrorHandler(err error, c echo.Context) {
-	code := errors.GetHTTPStatus(err)
+	code := getHTTPStatus(err)
 	message := err.Error()
 
 	// 记录错误日志

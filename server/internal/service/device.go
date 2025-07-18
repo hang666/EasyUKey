@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -12,7 +13,7 @@ import (
 	"github.com/hang666/EasyUKey/sdk/request"
 	"github.com/hang666/EasyUKey/server/internal/global"
 	"github.com/hang666/EasyUKey/server/internal/model/entity"
-	"github.com/hang666/EasyUKey/shared/pkg/errors"
+	"github.com/hang666/EasyUKey/shared/pkg/errs"
 	"github.com/hang666/EasyUKey/shared/pkg/identity"
 	"github.com/hang666/EasyUKey/shared/pkg/logger"
 	"github.com/hang666/EasyUKey/shared/pkg/messages"
@@ -26,7 +27,7 @@ func InitDevice(initReq *messages.DeviceInitRequestMessage) (string, string, err
 		initReq.SerialNumber, initReq.VolumeSerialNumber).First(&existingDevice)
 
 	if result.Error == nil {
-		return "", "", errors.ErrDeviceAlreadyExists
+		return "", "", errs.ErrDeviceAlreadyExists
 	}
 
 	if result.Error != gorm.ErrRecordNotFound {
@@ -75,8 +76,8 @@ func UpdateDevice(deviceID uint, req *request.UpdateDeviceRequest) (*entity.Devi
 	var device entity.Device
 	result := global.DB.Where("id = ?", deviceID).First(&device)
 	if result.Error != nil {
-		if result.Error == gorm.ErrRecordNotFound {
-			return nil, errors.ErrDeviceNotFound
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, errs.ErrDeviceNotFound
 		}
 		return nil, fmt.Errorf("查询设备失败: %w", result.Error)
 	}
@@ -152,23 +153,23 @@ func LinkDeviceToUser(deviceID uint, userID uint) (*entity.Device, error) {
 	var device entity.Device
 	result := global.DB.Where("id = ?", deviceID).First(&device)
 	if result.Error != nil {
-		if result.Error == gorm.ErrRecordNotFound {
-			return nil, errors.ErrDeviceNotFound
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, errs.ErrDeviceNotFound
 		}
 		return nil, fmt.Errorf("查询设备失败: %w", result.Error)
 	}
 
 	// 检查设备是否已绑定用户
 	if device.UserID != nil && *device.UserID != 0 {
-		return nil, errors.ErrDeviceAlreadyBound
+		return nil, errs.ErrDeviceAlreadyBound
 	}
 
 	// 检查用户是否存在
 	var user entity.User
 	result = global.DB.Where("id = ? AND is_active = ?", userID, true).First(&user)
 	if result.Error != nil {
-		if result.Error == gorm.ErrRecordNotFound {
-			return nil, errors.ErrUserNotFound
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, errs.ErrUserNotFound
 		}
 		return nil, fmt.Errorf("查询用户失败: %w", result.Error)
 	}
@@ -214,8 +215,8 @@ func UnlinkDeviceFromUser(deviceID uint) (*entity.Device, error) {
 	var device entity.Device
 	result := global.DB.Preload("User").Where("id = ?", deviceID).First(&device)
 	if result.Error != nil {
-		if result.Error == gorm.ErrRecordNotFound {
-			return nil, errors.ErrDeviceNotFound
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, errs.ErrDeviceNotFound
 		}
 		return nil, fmt.Errorf("查询设备失败: %w", result.Error)
 	}
@@ -269,8 +270,8 @@ func OfflineDevice(deviceID uint) (*entity.Device, error) {
 	var device entity.Device
 	result := global.DB.Where("id = ?", deviceID).First(&device)
 	if result.Error != nil {
-		if result.Error == gorm.ErrRecordNotFound {
-			return nil, errors.ErrDeviceNotFound
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, errs.ErrDeviceNotFound
 		}
 		return nil, fmt.Errorf("查询设备失败: %w", result.Error)
 	}
@@ -367,8 +368,8 @@ func GetDeviceDetail(deviceID uint) (*entity.Device, error) {
 	result := global.DB.Preload("User").Where("id = ?", deviceID).First(&device)
 
 	if result.Error != nil {
-		if result.Error == gorm.ErrRecordNotFound {
-			return nil, errors.ErrDeviceNotFound
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, errs.ErrDeviceNotFound
 		}
 		return nil, fmt.Errorf("查询设备失败: %w", result.Error)
 	}
@@ -423,7 +424,7 @@ func UpdateDeviceOnceKey(deviceID uint, oldOnceKey string) (string, error) {
 	result := global.DB.Where("id = ?", deviceID).First(&device)
 	if result.Error != nil {
 		if result.Error == gorm.ErrRecordNotFound {
-			return "", errors.ErrDeviceNotFound
+			return "", errs.ErrDeviceNotFound
 		}
 		return "", fmt.Errorf("查询设备失败: %w", result.Error)
 	}

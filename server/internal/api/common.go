@@ -5,13 +5,13 @@ import (
 
 	"github.com/labstack/echo/v4"
 
-	"github.com/hang666/EasyUKey/shared/pkg/errors"
+	"github.com/hang666/EasyUKey/shared/pkg/errs"
 )
 
 // bindAndValidate 绑定并验证请求参数
 func bindAndValidate(c echo.Context, req interface{}) error {
 	if err := c.Bind(req); err != nil {
-		return errors.ErrInvalidRequest
+		return errs.ErrInvalidRequest
 	}
 	return nil
 }
@@ -20,12 +20,12 @@ func bindAndValidate(c echo.Context, req interface{}) error {
 func parseUintParam(c echo.Context, paramName string) (uint, error) {
 	param := c.Param(paramName)
 	if param == "" {
-		return 0, errors.ErrInvalidDeviceID
+		return 0, errs.ErrInvalidDeviceID
 	}
 
 	value, err := strconv.ParseUint(param, 10, 32)
 	if err != nil {
-		return 0, errors.ErrInvalidDeviceID
+		return 0, errs.ErrInvalidDeviceID
 	}
 
 	return uint(value), nil

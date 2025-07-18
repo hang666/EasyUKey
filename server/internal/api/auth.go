@@ -9,7 +9,7 @@ import (
 	"github.com/hang666/EasyUKey/sdk/response"
 	"github.com/hang666/EasyUKey/server/internal/model/entity"
 	"github.com/hang666/EasyUKey/server/internal/service"
-	"github.com/hang666/EasyUKey/shared/pkg/errors"
+	"github.com/hang666/EasyUKey/shared/pkg/errs"
 	"github.com/hang666/EasyUKey/shared/pkg/logger"
 )
 
@@ -25,7 +25,7 @@ func StartAuth(c echo.Context) error {
 	req.UserID = username
 
 	if req.Challenge == "" {
-		return errors.ErrMissingChallenge
+		return errs.ErrMissingChallenge
 	}
 
 	// 从上下文获取API密钥信息
@@ -58,7 +58,7 @@ func VerifyAuth(c echo.Context) error {
 	}
 
 	if req.SessionID == "" {
-		return errors.ErrMissingSessionID
+		return errs.ErrMissingSessionID
 	}
 
 	session, err := service.VerifyAuth(&req)

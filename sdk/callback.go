@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hang666/EasyUKey/sdk/errs"
 	"github.com/hang666/EasyUKey/sdk/request"
 )
 
@@ -17,38 +18,38 @@ import (
 func ValidateCallbackRequest(data []byte, secret string) (*request.CallbackRequest, error) {
 	var req request.CallbackRequest
 	if err := json.Unmarshal(data, &req); err != nil {
-		return nil, fmt.Errorf("invalid JSON format: %v", err)
+		return nil, fmt.Errorf("%w: %v", errs.ErrInvalidJSON, err)
 	}
 
 	// 验证必需字段
 	if req.SessionID == "" {
-		return nil, fmt.Errorf("session_id is required")
+		return nil, errs.ErrMissingSessionID
 	}
 	if req.UserID == "" {
-		return nil, fmt.Errorf("user_id is required")
+		return nil, errs.ErrMissingUserID
 	}
 	if req.Status == "" {
-		return nil, fmt.Errorf("status is required")
+		return nil, errs.ErrMissingStatus
 	}
 	if req.Challenge == "" {
-		return nil, fmt.Errorf("challenge is required")
+		return nil, errs.ErrMissingChallenge
 	}
 	if req.Timestamp == 0 {
-		return nil, fmt.Errorf("timestamp is required")
+		return nil, errs.ErrMissingTimestamp
 	}
 	if req.Signature == "" {
-		return nil, fmt.Errorf("signature is required")
+		return nil, errs.ErrMissingSignature
 	}
 
 	// 验证时间戳（防重放攻击）
 	now := time.Now().Unix()
 	if req.Timestamp < now-300 || req.Timestamp > now+300 { // 5分钟窗口
-		return nil, fmt.Errorf("timestamp is out of acceptable range")
+		return nil, errs.ErrTimestampOutOfRange
 	}
 
 	// 验证签名
 	if !verifyCallbackSignature(&req, secret) {
-		return nil, fmt.Errorf("invalid signature")
+		return nil, errs.ErrInvalidSignature
 	}
 
 	return &req, nil
@@ -110,7 +111,7 @@ type CallbackHandler interface {
 func HandleCallback(data []byte, secret string, handler CallbackHandler) error {
 	req, err := ValidateCallbackRequest(data, secret)
 	if err != nil {
-		return fmt.Errorf("回调验证失败: %v", err)
+		return fmt.Errorf("%w: %v", errs.ErrCallbackValidationFailed, err)
 	}
 
 	switch req.Status {
@@ -119,6 +120,6 @@ func HandleCallback(data []byte, secret string, handler CallbackHandler) error {
 	case "failed":
 		return handler.OnAuthFailure(req)
 	default:
-		return fmt.Errorf("unknown callback status: %s", req.Status)
+		return fmt.Errorf("%w: %s", errs.ErrUnknownCallbackStatus, req.Status)
 	}
 }

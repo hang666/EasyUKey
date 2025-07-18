@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"strconv"
 
+	"github.com/hang666/EasyUKey/sdk/errs"
 	"github.com/hang666/EasyUKey/sdk/request"
 	"github.com/hang666/EasyUKey/sdk/response"
 )
@@ -37,7 +38,7 @@ func (c *AdminClient) CreateUser(req *request.CreateUserRequest) (*User, error) 
 
 	var user User
 	if err := mapToStruct(resp.Data, &user); err != nil {
-		return nil, fmt.Errorf("解析用户数据失败: %w", err)
+		return nil, fmt.Errorf("%w: %v", errs.ErrDataParseFailed, err)
 	}
 
 	return &user, nil
@@ -53,7 +54,7 @@ func (c *AdminClient) GetUser(userID uint) (*User, error) {
 
 	var user User
 	if err := mapToStruct(resp.Data, &user); err != nil {
-		return nil, fmt.Errorf("解析用户数据失败: %w", err)
+		return nil, fmt.Errorf("%w: %v", errs.ErrDataParseFailed, err)
 	}
 
 	return &user, nil
@@ -80,7 +81,7 @@ func (c *AdminClient) GetUsers(page, pageSize int) ([]User, int64, error) {
 
 	var users []User
 	if err := mapToStruct(resp.Data, &users); err != nil {
-		return nil, 0, fmt.Errorf("解析用户列表失败: %w", err)
+		return nil, 0, fmt.Errorf("%w: %v", errs.ErrDataParseFailed, err)
 	}
 
 	total := int64(0)
@@ -101,7 +102,7 @@ func (c *AdminClient) UpdateUser(userID uint, req *request.UpdateUserRequest) (*
 
 	var user User
 	if err := mapToStruct(resp.Data, &user); err != nil {
-		return nil, fmt.Errorf("解析用户数据失败: %w", err)
+		return nil, fmt.Errorf("%w: %v", errs.ErrDataParseFailed, err)
 	}
 
 	return &user, nil
@@ -124,7 +125,7 @@ func (c *AdminClient) GetUserDevices(username string) ([]Device, error) {
 
 	var devices []Device
 	if err := mapToStruct(resp.Data, &devices); err != nil {
-		return nil, fmt.Errorf("解析设备列表失败: %w", err)
+		return nil, fmt.Errorf("%w: %v", errs.ErrDataParseFailed, err)
 	}
 
 	return devices, nil
@@ -175,7 +176,7 @@ func (c *AdminClient) GetDevices(page, pageSize int, filter *request.DeviceFilte
 
 	var devices []Device
 	if err := mapToStruct(resp.Data, &devices); err != nil {
-		return nil, 0, fmt.Errorf("解析设备列表失败: %w", err)
+		return nil, 0, fmt.Errorf("%w: %v", errs.ErrDataParseFailed, err)
 	}
 
 	total := int64(0)
@@ -196,7 +197,7 @@ func (c *AdminClient) GetDevice(deviceID uint) (*Device, error) {
 
 	var device Device
 	if err := mapToStruct(resp.Data, &device); err != nil {
-		return nil, fmt.Errorf("解析设备数据失败: %w", err)
+		return nil, fmt.Errorf("%w: %v", errs.ErrDataParseFailed, err)
 	}
 
 	return &device, nil
@@ -212,7 +213,7 @@ func (c *AdminClient) UpdateDevice(deviceID uint, req *request.UpdateDeviceReque
 
 	var device Device
 	if err := mapToStruct(resp.Data, &device); err != nil {
-		return nil, fmt.Errorf("解析设备数据失败: %w", err)
+		return nil, fmt.Errorf("%w: %v", errs.ErrDataParseFailed, err)
 	}
 
 	return &device, nil
@@ -228,7 +229,7 @@ func (c *AdminClient) LinkDeviceToUser(deviceID uint, req *request.LinkDeviceToU
 
 	var device Device
 	if err := mapToStruct(resp.Data, &device); err != nil {
-		return nil, fmt.Errorf("解析设备数据失败: %w", err)
+		return nil, fmt.Errorf("%w: %v", errs.ErrDataParseFailed, err)
 	}
 
 	return &device, nil
@@ -244,7 +245,7 @@ func (c *AdminClient) UnlinkDeviceFromUser(deviceID uint) (*Device, error) {
 
 	var device Device
 	if err := mapToStruct(resp.Data, &device); err != nil {
-		return nil, fmt.Errorf("解析设备数据失败: %w", err)
+		return nil, fmt.Errorf("%w: %v", errs.ErrDataParseFailed, err)
 	}
 
 	return &device, nil
@@ -260,7 +261,7 @@ func (c *AdminClient) OfflineDevice(deviceID uint) (*Device, error) {
 
 	var device Device
 	if err := mapToStruct(resp.Data, &device); err != nil {
-		return nil, fmt.Errorf("解析设备数据失败: %w", err)
+		return nil, fmt.Errorf("%w: %v", errs.ErrDataParseFailed, err)
 	}
 
 	return &device, nil
@@ -275,7 +276,7 @@ func (c *AdminClient) GetDeviceStatistics() (*response.DeviceStatistics, error) 
 
 	var stats response.DeviceStatistics
 	if err := mapToStruct(resp.Data, &stats); err != nil {
-		return nil, fmt.Errorf("解析统计数据失败: %w", err)
+		return nil, fmt.Errorf("%w: %v", errs.ErrDataParseFailed, err)
 	}
 
 	return &stats, nil
@@ -290,7 +291,7 @@ func (c *AdminClient) CreateAPIKey(req *request.CreateAPIKeyRequest) (*APIKey, e
 
 	var apiKey APIKey
 	if err := mapToStruct(resp.Data, &apiKey); err != nil {
-		return nil, fmt.Errorf("解析API密钥数据失败: %w", err)
+		return nil, fmt.Errorf("%w: %v", errs.ErrDataParseFailed, err)
 	}
 
 	return &apiKey, nil
@@ -317,7 +318,7 @@ func (c *AdminClient) GetAPIKeys(page, pageSize int) ([]APIKey, int64, error) {
 
 	var apiKeys []APIKey
 	if err := mapToStruct(resp.Data, &apiKeys); err != nil {
-		return nil, 0, fmt.Errorf("解析API密钥列表失败: %w", err)
+		return nil, 0, fmt.Errorf("%w: %v", errs.ErrDataParseFailed, err)
 	}
 
 	total := int64(0)

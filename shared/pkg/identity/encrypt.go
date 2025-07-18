@@ -8,8 +8,9 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
-	"errors"
 	"io"
+
+	"github.com/hang666/EasyUKey/shared/pkg/errs"
 )
 
 // Encryptor 封装加解密逻辑
@@ -20,7 +21,7 @@ type Encryptor struct {
 // NewEncryptor 创建一个新的加解密器
 func NewEncryptor(key []byte) (*Encryptor, error) {
 	if len(key) != 32 {
-		return nil, errors.New("key must be 32 bytes for AES-256")
+		return nil, errs.ErrKeyTooShort
 	}
 	return &Encryptor{Key: key}, nil
 }
@@ -53,7 +54,7 @@ func (e *Encryptor) Encrypt(plainData []byte) ([]byte, error) {
 // Decrypt 解密数据
 func (e *Encryptor) Decrypt(cipherData []byte) ([]byte, error) {
 	if len(cipherData) < aes.BlockSize {
-		return nil, errors.New("ciphertext too short")
+		return nil, errs.ErrCipherTextTooShort
 	}
 
 	block, err := aes.NewCipher(e.Key)
@@ -65,7 +66,7 @@ func (e *Encryptor) Decrypt(cipherData []byte) ([]byte, error) {
 	cipherText := cipherData[aes.BlockSize:]
 
 	if len(cipherText)%aes.BlockSize != 0 {
-		return nil, errors.New("cipherText is not a multiple of the block size")
+		return nil, errs.ErrCipherBlockSize
 	}
 
 	plainText := make([]byte, len(cipherText))
@@ -85,15 +86,15 @@ func pkcs7Pad(data []byte, blockSize int) []byte {
 func pkcs7Unpad(data []byte) ([]byte, error) {
 	length := len(data)
 	if length == 0 {
-		return nil, errors.New("data is empty")
+		return nil, errs.ErrDataEmpty
 	}
 	padLen := int(data[length-1])
 	if padLen > length || padLen > aes.BlockSize {
-		return nil, errors.New("invalid padding size")
+		return nil, errs.ErrInvalidPaddingSize
 	}
 	for _, v := range data[length-padLen:] {
 		if int(v) != padLen {
-			return nil, errors.New("invalid padding content")
+			return nil, errs.ErrInvalidPaddingContent
 		}
 	}
 	return data[:length-padLen], nil
@@ -181,7 +182,7 @@ func (kx *KeyExchange) ComputeSharedKey(peerPublicKeyBase64 string) error {
 // GetSharedKey 获取共享密钥
 func (kx *KeyExchange) GetSharedKey() ([]byte, error) {
 	if kx.sharedKey == nil {
-		return nil, errors.New("shared key not computed")
+		return nil, errs.ErrSharedKeyNotComputed
 	}
 	return kx.sharedKey, nil
 }

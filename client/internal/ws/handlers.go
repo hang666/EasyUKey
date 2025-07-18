@@ -9,7 +9,7 @@ import (
 	"github.com/hang666/EasyUKey/client/internal/confirmation"
 	"github.com/hang666/EasyUKey/client/internal/device"
 	"github.com/hang666/EasyUKey/client/internal/global"
-	"github.com/hang666/EasyUKey/shared/pkg/errors"
+	"github.com/hang666/EasyUKey/shared/pkg/errs"
 	"github.com/hang666/EasyUKey/shared/pkg/identity"
 	"github.com/hang666/EasyUKey/shared/pkg/logger"
 	"github.com/hang666/EasyUKey/shared/pkg/messages"
@@ -35,7 +35,7 @@ func handleAuthRequest(message messages.WSMessage) {
 	// 检查设备状态
 	dev := device.DeviceInfo.GetDevice()
 	if dev == nil {
-		SendAuthResponse(authReq.RequestID, false, "", "", "", "", errors.ErrDeviceNotFoundClient.Error())
+		SendAuthResponse(authReq.RequestID, false, "", "", "", "", errs.ErrDeviceNotFoundClient.Error())
 		return
 	}
 
@@ -52,7 +52,7 @@ func handleAuthRequest(message messages.WSMessage) {
 	// 显示确认页面，调用confirmation包
 	if err := confirmation.ShowAuthRequest(request); err != nil {
 		logger.Logger.Error("显示认证页面失败", "error", err)
-		SendAuthResponse(authReq.RequestID, false, "", "", "", "", errors.ErrShowPageFailed.Error())
+		SendAuthResponse(authReq.RequestID, false, "", "", "", "", errs.ErrShowPageFailed.Error())
 		return
 	}
 
@@ -62,14 +62,14 @@ func handleAuthRequest(message messages.WSMessage) {
 	if err != nil {
 		logger.Logger.Error("等待用户确认失败", "error", err)
 		confirmation.SendResult(false, "认证超时")
-		SendAuthResponse(authReq.RequestID, false, "", "", dev.SerialNumber, dev.VolumeSerialNumber, errors.ErrWaitConfirmFailed.Error())
+		SendAuthResponse(authReq.RequestID, false, "", "", dev.SerialNumber, dev.VolumeSerialNumber, errs.ErrWaitConfirmFailed.Error())
 		return
 	}
 
 	if !confirmResult.Confirmed {
 		logger.Logger.Info("用户拒绝认证")
 		confirmation.SendResult(false, "用户拒绝认证")
-		SendAuthResponse(authReq.RequestID, false, "", "", dev.SerialNumber, dev.VolumeSerialNumber, errors.ErrUserRejected.Error())
+		SendAuthResponse(authReq.RequestID, false, "", "", dev.SerialNumber, dev.VolumeSerialNumber, errs.ErrUserRejected.Error())
 		return
 	}
 

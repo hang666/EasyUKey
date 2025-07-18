@@ -7,7 +7,7 @@ import (
 
 	"github.com/hang666/EasyUKey/sdk/response"
 	"github.com/hang666/EasyUKey/server/internal/service"
-	"github.com/hang666/EasyUKey/shared/pkg/errors"
+	"github.com/hang666/EasyUKey/shared/pkg/errs"
 )
 
 // AdminPanel 管理员面板页面
@@ -26,16 +26,16 @@ func VerifyAdminKey(c echo.Context) error {
 	}
 
 	if req.AdminKey == "" {
-		return errors.ErrMissingAdminKey
+		return errs.ErrMissingAdminKey
 	}
 
 	// 验证管理员密钥
 	apiKey, err := service.GetAPIKey(req.AdminKey)
 	if err != nil {
-		return errors.ErrInvalidKey
+		return errs.ErrInvalidKey
 	}
 	if !apiKey.IsAdmin {
-		return errors.ErrInvalidKey
+		return errs.ErrInvalidKey
 	}
 
 	result := map[string]interface{}{

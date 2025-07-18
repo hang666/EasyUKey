@@ -2,6 +2,7 @@ package service
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"gorm.io/gorm"
@@ -9,7 +10,7 @@ import (
 	"github.com/hang666/EasyUKey/sdk/request"
 	"github.com/hang666/EasyUKey/server/internal/global"
 	"github.com/hang666/EasyUKey/server/internal/model/entity"
-	"github.com/hang666/EasyUKey/shared/pkg/errors"
+	"github.com/hang666/EasyUKey/shared/pkg/errs"
 	"github.com/hang666/EasyUKey/shared/pkg/logger"
 )
 
@@ -19,7 +20,7 @@ func CreateUser(req *request.CreateUserRequest) (*entity.User, error) {
 	var existingUser entity.User
 	result := global.DB.Where("username = ?", req.Username).First(&existingUser)
 	if result.Error == nil {
-		return nil, errors.ErrUserAlreadyExists
+		return nil, errs.ErrUserAlreadyExists
 	}
 
 	// 创建用户
@@ -45,8 +46,8 @@ func GetUser(userID uint) (*entity.User, error) {
 	var user entity.User
 	result := global.DB.Where("id = ?", userID).First(&user)
 	if result.Error != nil {
-		if result.Error == gorm.ErrRecordNotFound {
-			return nil, errors.ErrUserNotFound
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, errs.ErrUserNotFound
 		}
 		return nil, fmt.Errorf("查询用户失败: %w", result.Error)
 	}
@@ -86,8 +87,8 @@ func UpdateUser(userID uint, req *request.UpdateUserRequest) (*entity.User, erro
 	var user entity.User
 	result := global.DB.Where("id = ?", userID).First(&user)
 	if result.Error != nil {
-		if result.Error == gorm.ErrRecordNotFound {
-			return nil, errors.ErrUserNotFound
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, errs.ErrUserNotFound
 		}
 		return nil, fmt.Errorf("查询用户失败: %w", result.Error)
 	}
@@ -97,7 +98,7 @@ func UpdateUser(userID uint, req *request.UpdateUserRequest) (*entity.User, erro
 		var existingUser entity.User
 		result := global.DB.Where("username = ? AND id != ?", req.Username, userID).First(&existingUser)
 		if result.Error == nil {
-			return nil, errors.ErrUserAlreadyExists
+			return nil, errs.ErrUserAlreadyExists
 		}
 	}
 
@@ -155,8 +156,8 @@ func DeleteUser(userID uint) error {
 	var user entity.User
 	result := global.DB.Where("id = ?", userID).First(&user)
 	if result.Error != nil {
-		if result.Error == gorm.ErrRecordNotFound {
-			return errors.ErrUserNotFound
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return errs.ErrUserNotFound
 		}
 		return fmt.Errorf("查询用户失败: %w", result.Error)
 	}
@@ -186,8 +187,8 @@ func GetUserDevices(username string) ([]entity.Device, error) {
 	var user entity.User
 	result := global.DB.Where("username = ?", username).First(&user)
 	if result.Error != nil {
-		if result.Error == gorm.ErrRecordNotFound {
-			return nil, errors.ErrUserNotFound
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, errs.ErrUserNotFound
 		}
 		return nil, fmt.Errorf("查询用户失败: %w", result.Error)
 	}

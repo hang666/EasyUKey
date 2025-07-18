@@ -9,7 +9,7 @@ import (
 	"github.com/hang666/EasyUKey/sdk/request"
 	"github.com/hang666/EasyUKey/sdk/response"
 	"github.com/hang666/EasyUKey/server/internal/service"
-	"github.com/hang666/EasyUKey/shared/pkg/errors"
+	"github.com/hang666/EasyUKey/shared/pkg/errs"
 	"github.com/hang666/EasyUKey/shared/pkg/logger"
 )
 
@@ -21,7 +21,7 @@ func CreateUser(c echo.Context) error {
 	}
 
 	if req.Username == "" {
-		return errors.ErrMissingUsername
+		return errs.ErrMissingUsername
 	}
 
 	user, err := service.CreateUser(&req)

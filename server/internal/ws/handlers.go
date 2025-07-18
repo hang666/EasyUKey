@@ -7,7 +7,7 @@ import (
 
 	"github.com/hang666/EasyUKey/server/internal/global"
 	"github.com/hang666/EasyUKey/server/internal/service"
-	"github.com/hang666/EasyUKey/shared/pkg/errors"
+	"github.com/hang666/EasyUKey/shared/pkg/errs"
 	"github.com/hang666/EasyUKey/shared/pkg/identity"
 	"github.com/hang666/EasyUKey/shared/pkg/logger"
 	"github.com/hang666/EasyUKey/shared/pkg/messages"
@@ -19,7 +19,7 @@ func handleDeviceRegister(client *Client, wsMsg *messages.WSMessage) error {
 	// 验证消息
 	if err := wsutil.ValidateMessage(wsMsg); err != nil {
 		logger.Logger.Error("处理device_register消息失败", "error", err, "user_id", client.UserID, "device_id", client.DeviceID)
-		return sendErrorToClient(client, "device_register", "validation_error", errors.ErrWSValidation.Error())
+		return sendErrorToClient(client, "device_register", "validation_error", errs.ErrWSValidation.Error())
 	}
 
 	// 解析注册消息
@@ -41,7 +41,7 @@ func handleDeviceRegister(client *Client, wsMsg *messages.WSMessage) error {
 
 	if result.Error != nil {
 		logger.Logger.Error("处理device_register消息失败", "error", result.Error, "user_id", client.UserID, "device_id", client.DeviceID, "serial_number", regMsg.SerialNumber, "volume_serial_number", regMsg.VolumeSerialNumber)
-		return sendErrorToClient(client, "device_register", "device_not_found", errors.ErrDeviceNotFoundClient.Error())
+		return sendErrorToClient(client, "device_register", "device_not_found", errs.ErrDeviceNotFoundClient.Error())
 	}
 
 	// 更新客户端信息

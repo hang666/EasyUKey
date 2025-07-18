@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/hang666/EasyUKey/sdk/errs"
 	"github.com/hang666/EasyUKey/sdk/request"
 	"github.com/hang666/EasyUKey/sdk/response"
 )
@@ -46,14 +47,14 @@ func (c *Client) request(method, path string, body interface{}) (*response.Respo
 	if body != nil {
 		jsonData, err := json.Marshal(body)
 		if err != nil {
-			return nil, fmt.Errorf("序列化请求体失败: %w", err)
+			return nil, fmt.Errorf("%w: %v", errs.ErrSerializationFailed, err)
 		}
 		reqBody = bytes.NewBuffer(jsonData)
 	}
 
 	req, err := http.NewRequest(method, c.baseURL+path, reqBody)
 	if err != nil {
-		return nil, fmt.Errorf("创建请求失败: %w", err)
+		return nil, fmt.Errorf("%w: %v", errs.ErrRequestCreationFailed, err)
 	}
 
 	if body != nil {
@@ -67,17 +68,17 @@ func (c *Client) request(method, path string, body interface{}) (*response.Respo
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("请求失败: %w", err)
+		return nil, fmt.Errorf("%w: %v", errs.ErrRequestFailed, err)
 	}
 	defer resp.Body.Close()
 
 	var result response.Response
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return nil, fmt.Errorf("解析响应失败: %w", err)
+		return nil, fmt.Errorf("%w: %v", errs.ErrResponseParseFailed, err)
 	}
 
 	if !result.Success {
-		return &result, fmt.Errorf("API错误: %s", result.Message)
+		return &result, fmt.Errorf("%w: %s", errs.ErrAPIError, result.Message)
 	}
 
 	return &result, nil
@@ -92,7 +93,7 @@ func (c *Client) StartAuth(username string, req *request.AuthRequest) (*response
 
 	var authData response.AuthData
 	if err := mapToStruct(resp.Data, &authData); err != nil {
-		return nil, fmt.Errorf("解析认证数据失败: %w", err)
+		return nil, fmt.Errorf("%w: %v", errs.ErrDataParseFailed, err)
 	}
 
 	return &authData, nil
@@ -107,7 +108,7 @@ func (c *Client) VerifyAuth(req *request.VerifyAuthRequest) (*response.VerifyAut
 
 	var verifyData response.VerifyAuthData
 	if err := mapToStruct(resp.Data, &verifyData); err != nil {
-		return nil, fmt.Errorf("解析验证数据失败: %w", err)
+		return nil, fmt.Errorf("%w: %v", errs.ErrDataParseFailed, err)
 	}
 
 	return &verifyData, nil
@@ -122,7 +123,7 @@ func (c *Client) Health() (map[string]string, error) {
 
 	data, ok := resp.Data.(map[string]string)
 	if !ok {
-		return nil, fmt.Errorf("响应数据格式错误")
+		return nil, errs.ErrInvalidResponseFormat
 	}
 
 	return data, nil

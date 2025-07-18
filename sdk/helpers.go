@@ -6,6 +6,7 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/hang666/EasyUKey/sdk/errs"
 	"github.com/hang666/EasyUKey/sdk/request"
 	"github.com/hang666/EasyUKey/sdk/response"
 )
@@ -29,7 +30,7 @@ func (h *AuthHelper) GenerateChallenge() (string, error) {
 	for i := range result {
 		num, err := rand.Int(rand.Reader, big.NewInt(int64(len(charset))))
 		if err != nil {
-			return "", fmt.Errorf("生成随机数失败: %w", err)
+			return "", fmt.Errorf("%w: %v", errs.ErrRandomGenerationFailed, err)
 		}
 		result[i] = charset[num.Int64()]
 	}
@@ -42,7 +43,7 @@ func (h *AuthHelper) SimpleAuth(username, apiKey string) (*response.VerifyAuthDa
 	// 生成挑战码
 	challenge, err := h.GenerateChallenge()
 	if err != nil {
-		return nil, fmt.Errorf("生成挑战码失败: %w", err)
+		return nil, fmt.Errorf("%w: %v", errs.ErrChallengeGenerationFailed, err)
 	}
 
 	// 发起认证
@@ -54,7 +55,7 @@ func (h *AuthHelper) SimpleAuth(username, apiKey string) (*response.VerifyAuthDa
 
 	authData, err := h.client.StartAuth(username, authReq)
 	if err != nil {
-		return nil, fmt.Errorf("发起认证失败: %w", err)
+		return nil, fmt.Errorf("%w: %v", errs.ErrAuthStartFailed, err)
 	}
 
 	// 等待认证完成
@@ -73,7 +74,7 @@ func (h *AuthHelper) WaitForAuth(apiKey, sessionID string, timeout time.Duration
 
 	for range ticker.C {
 		if time.Now().After(deadline) {
-			return nil, fmt.Errorf("认证超时")
+			return nil, errs.ErrAuthTimeout
 		}
 
 		result, err := h.client.VerifyAuth(verifyReq)
@@ -86,7 +87,7 @@ func (h *AuthHelper) WaitForAuth(apiKey, sessionID string, timeout time.Duration
 			return result, nil
 		}
 	}
-	return nil, fmt.Errorf("认证超时")
+	return nil, errs.ErrAuthTimeout
 }
 
 // QuickAuth 快速认证（带消息和动作）

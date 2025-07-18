@@ -1,7 +1,6 @@
 package ws
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"sync"
@@ -10,6 +9,7 @@ import (
 	"github.com/gorilla/websocket"
 
 	"github.com/hang666/EasyUKey/client/internal/confirmation"
+	"github.com/hang666/EasyUKey/shared/pkg/errs"
 	"github.com/hang666/EasyUKey/shared/pkg/identity"
 	"github.com/hang666/EasyUKey/shared/pkg/logger"
 	"github.com/hang666/EasyUKey/shared/pkg/messages"
@@ -34,9 +34,6 @@ var (
 	keyExchange     *identity.KeyExchange
 	encryptor       *identity.Encryptor
 	handshakeStatus messages.HandshakeStatus
-
-	errNotConnected       = errors.New("websocket is not connected")
-	errDeviceNotAvailable = errors.New("device information not available")
 )
 
 // Init 初始化WebSocket客户端模块
@@ -49,13 +46,13 @@ func Init(addr string, initialized bool) {
 func Connect() error {
 	wsURL, err := wsutil.ConvertHTTPToWS(serverAddr)
 	if err != nil {
-		return fmt.Errorf("转换WebSocket URL失败: %v", err)
+		return fmt.Errorf("%w: %v", errs.ErrConvertWSURLFailed, err)
 	}
 	wsURL += WsPath
 
 	conn, _, err = websocket.DefaultDialer.Dial(wsURL, nil)
 	if err != nil {
-		return fmt.Errorf("WebSocket连接失败: %v", err)
+		return fmt.Errorf("%w: %v", errs.ErrWSConnectFailed, err)
 	}
 
 	setConnected(true)
@@ -80,13 +77,13 @@ func Connect() error {
 			break
 		}
 		if handshakeStatus == messages.HandshakeStatusFailed {
-			return fmt.Errorf("密钥协商失败")
+			return errs.ErrKeyExchangeFailed
 		}
 		time.Sleep(1 * time.Second)
 	}
 
 	if handshakeStatus != messages.HandshakeStatusCompleted {
-		return fmt.Errorf("密钥协商超时")
+		return errs.ErrKeyExchangeTimeout
 	}
 
 	logger.Logger.Info("密钥协商完成，发送设备请求")

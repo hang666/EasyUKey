@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hang666/EasyUKey/shared/pkg/errs"
 	"github.com/hang666/EasyUKey/shared/pkg/messages"
 )
 
@@ -28,14 +29,14 @@ func SendMessageToChannel(sendChan chan<- []byte, msgType string, data interface
 
 	msgBytes, err := json.Marshal(message)
 	if err != nil {
-		return fmt.Errorf("序列化消息失败: %w", err)
+		return fmt.Errorf("%w: %v", errs.ErrSerializationFailed, err)
 	}
 
 	select {
 	case sendChan <- msgBytes:
 		return nil
 	default:
-		return fmt.Errorf("发送通道已满")
+		return errs.ErrWSChannelFull
 	}
 }
 
@@ -56,11 +57,11 @@ func ParseMessage[T any](wsMsg *messages.WSMessage) (T, error) {
 	var result T
 	msgBytes, err := json.Marshal(wsMsg.Data)
 	if err != nil {
-		return result, fmt.Errorf("序列化消息数据失败: %w", err)
+		return result, fmt.Errorf("%w: %v", errs.ErrSerializationFailed, err)
 	}
 
 	if err := json.Unmarshal(msgBytes, &result); err != nil {
-		return result, fmt.Errorf("解析消息数据失败: %w", err)
+		return result, fmt.Errorf("%w: %v", errs.ErrWSParse, err)
 	}
 
 	return result, nil
@@ -69,13 +70,13 @@ func ParseMessage[T any](wsMsg *messages.WSMessage) (T, error) {
 // ValidateMessage 验证消息基本格式
 func ValidateMessage(wsMsg *messages.WSMessage) error {
 	if wsMsg == nil {
-		return fmt.Errorf("消息不能为空")
+		return errs.ErrMessageEmpty
 	}
 	if wsMsg.Type == "" {
-		return fmt.Errorf("消息类型不能为空")
+		return errs.ErrMessageTypeEmpty
 	}
 	if wsMsg.Data == nil {
-		return fmt.Errorf("消息数据不能为空")
+		return errs.ErrMessageDataEmpty
 	}
 	return nil
 }

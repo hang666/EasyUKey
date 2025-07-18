@@ -3,6 +3,7 @@ package service
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -15,7 +16,7 @@ import (
 	"github.com/hang666/EasyUKey/server/internal/global"
 	"github.com/hang666/EasyUKey/server/internal/model/entity"
 	"github.com/hang666/EasyUKey/shared/pkg/callback"
-	"github.com/hang666/EasyUKey/shared/pkg/errors"
+	"github.com/hang666/EasyUKey/shared/pkg/errs"
 	"github.com/hang666/EasyUKey/shared/pkg/identity"
 	"github.com/hang666/EasyUKey/shared/pkg/logger"
 	"github.com/hang666/EasyUKey/shared/pkg/messages"
@@ -31,15 +32,15 @@ func ValidateAPIKey(apiKey string) (*entity.APIKey, error) {
 	var key entity.APIKey
 	result := global.DB.Where("api_key = ? AND is_active = ?", apiKey, true).First(&key)
 	if result.Error != nil {
-		if result.Error == gorm.ErrRecordNotFound {
-			return nil, errors.ErrAPIKeyInvalid
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, errs.ErrAPIKeyInvalid
 		}
 		return nil, fmt.Errorf("查询API密钥失败: %w", result.Error)
 	}
 
 	// 检查过期时间
 	if key.ExpiresAt != nil && key.ExpiresAt.Before(time.Now()) {
-		return nil, errors.ErrAPIKeyInvalid
+		return nil, errs.ErrAPIKeyInvalid
 	}
 
 	return &key, nil
@@ -51,21 +52,21 @@ func ValidateAuthKey(authKey string, deviceID uint, challenge string) (*entity.D
 	var device entity.Device
 	result := global.DB.Where("id = ?", deviceID).First(&device)
 	if result.Error != nil {
-		if result.Error == gorm.ErrRecordNotFound {
-			return nil, errors.ErrDeviceNotFound
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, errs.ErrDeviceNotFound
 		}
 		return nil, fmt.Errorf("查询设备失败: %w", result.Error)
 	}
 
 	// 检查设备是否激活
 	if !device.IsActive {
-		return nil, errors.ErrAuthDeviceInactive
+		return nil, errs.ErrDeviceNotActive
 	}
 
 	// 解析认证密钥格式: {challenge}:_:{onceKey}:_:{totpCode}:_:{serialNumber}:_:{volumeSerialNumber}
 	parts := strings.Split(authKey, ":_:")
 	if len(parts) != 5 {
-		return nil, errors.ErrAuthInvalidKey
+		return nil, errs.ErrAuthInvalidKey
 	}
 
 	receivedChallenge := parts[0]
@@ -76,17 +77,17 @@ func ValidateAuthKey(authKey string, deviceID uint, challenge string) (*entity.D
 
 	// 验证挑战码
 	if receivedChallenge != challenge {
-		return nil, errors.ErrAuthChallengeInvalid
+		return nil, errs.ErrAuthChallengeInvalid
 	}
 
 	// 验证设备序列号
 	if receivedSerialNumber != device.SerialNumber || receivedVolumeSerial != device.VolumeSerialNumber {
-		return nil, errors.ErrAuthSerialMismatch
+		return nil, errs.ErrAuthSerialMismatch
 	}
 
 	// 验证OnceKey
 	if receivedOnceKey != device.OnceKey {
-		return nil, errors.ErrAuthOnceKeyMismatch
+		return nil, errs.ErrAuthOnceKeyMismatch
 	}
 
 	// 验证TOTP代码
@@ -101,7 +102,7 @@ func ValidateAuthKey(authKey string, deviceID uint, challenge string) (*entity.D
 	}
 
 	if !isValidTOTP {
-		return nil, errors.ErrAuthTOTPInvalid
+		return nil, errs.ErrAuthTOTPInvalid
 	}
 
 	return &device, nil
@@ -113,8 +114,8 @@ func ProcessAuthResponse(sessionID string, authResp *messages.AuthResponseMessag
 	var session entity.AuthSession
 	result := global.DB.Where("id = ?", sessionID).First(&session)
 	if result.Error != nil {
-		if result.Error == gorm.ErrRecordNotFound {
-			return errors.ErrSessionNotFound
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return errs.ErrSessionNotFound
 		}
 		return fmt.Errorf("查询认证会话失败: %w", result.Error)
 	}
@@ -130,7 +131,7 @@ func ProcessAuthResponse(sessionID string, authResp *messages.AuthResponseMessag
 		global.DB.Model(&session).Updates(map[string]interface{}{
 			"status": entity.AuthStatusExpired,
 		})
-		return errors.ErrSessionExpired
+		return errs.ErrSessionExpired
 	}
 
 	// 首先验证设备和密钥（无论成功还是失败都需要验证）
@@ -215,7 +216,7 @@ func ProcessAuthResponse(sessionID string, authResp *messages.AuthResponseMessag
 		// 认证失败，区分用户拒绝和其他失败情况
 		updates["result"] = entity.AuthResultFailure
 
-		if authResp.Error == errors.ErrUserRejected.Error() {
+		if authResp.Error == errs.ErrUserRejected.Error() {
 			updates["status"] = entity.AuthStatusRejected
 			logger.Logger.Info("用户拒绝认证",
 				"session_id", sessionID,
@@ -251,8 +252,8 @@ func StartAuth(req *request.AuthRequest, apiKey *entity.APIKey) (*entity.AuthSes
 	var user entity.User
 	result := global.DB.Where("username = ? AND is_active = ?", req.UserID, true).First(&user)
 	if result.Error != nil {
-		if result.Error == gorm.ErrRecordNotFound {
-			return nil, errors.ErrUserNotFound
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, errs.ErrUserNotFound
 		}
 		return nil, fmt.Errorf("查询用户失败: %w", result.Error)
 	}
@@ -265,7 +266,7 @@ func StartAuth(req *request.AuthRequest, apiKey *entity.APIKey) (*entity.AuthSes
 	}
 
 	if len(onlineDevices) == 0 {
-		return nil, errors.ErrUserNotOnline
+		return nil, errs.ErrUserNotOnline
 	}
 
 	// 如果请求指定了action，检查是否有设备具备相应权限
@@ -283,7 +284,7 @@ func StartAuth(req *request.AuthRequest, apiKey *entity.APIKey) (*entity.AuthSes
 			}
 		}
 		if !canPerformAction {
-			return nil, errors.ErrPermissionDenied
+			return nil, errs.ErrPermissionDenied
 		}
 	}
 
@@ -443,15 +444,15 @@ func VerifyAuth(req *request.VerifyAuthRequest) (*entity.AuthSession, error) {
 	var session entity.AuthSession
 	result := global.DB.Where("id = ?", req.SessionID).First(&session)
 	if result.Error != nil {
-		if result.Error == gorm.ErrRecordNotFound {
-			return nil, errors.ErrSessionNotFound
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, errs.ErrSessionNotFound
 		}
 		return nil, fmt.Errorf("查询认证会话失败: %w", result.Error)
 	}
 
 	// 检查会话状态
 	if session.ExpiresAt.Before(time.Now()) {
-		return nil, errors.ErrSessionExpired
+		return nil, errs.ErrSessionExpired
 	}
 
 	return &session, nil
