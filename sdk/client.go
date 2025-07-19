@@ -85,8 +85,8 @@ func (c *Client) request(method, path string, body interface{}) (*response.Respo
 }
 
 // StartAuth 发起用户认证
-func (c *Client) StartAuth(username string, req *request.AuthRequest) (*response.AuthData, error) {
-	resp, err := c.request("POST", "/api/v1/users/"+username+"/auth", req)
+func (c *Client) StartAuth(req *request.AuthRequest) (*response.AuthData, error) {
+	resp, err := c.request("POST", "/api/v1/auth", req)
 	if err != nil {
 		return nil, err
 	}

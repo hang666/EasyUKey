@@ -38,7 +38,7 @@ func handleAuthRequest(message messages.WSMessage) {
 	// 创建认证请求对象用于显示
 	request := &confirmation.AuthRequest{
 		ID:        authReq.RequestID,
-		UserID:    authReq.UserID,
+		UserID:    authReq.Username,
 		Challenge: authReq.Challenge,
 		Message:   authReq.Message,
 		Timestamp: time.Now(),

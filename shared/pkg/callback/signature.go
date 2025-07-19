@@ -17,7 +17,7 @@ func GenerateSignature(req *messages.CallbackRequest, secret string) string {
 	// 构建签名字符串
 	data := map[string]string{
 		"session_id": req.SessionID,
-		"user_id":    req.UserID,
+		"username":   req.Username,
 		"status":     req.Status,
 		"challenge":  req.Challenge,
 		"action":     req.Action,
@@ -61,7 +61,7 @@ func ValidateCallbackRequest(req *messages.CallbackRequest, secret string) error
 	if req.SessionID == "" {
 		return errs.ErrCallbackSessionIDMissing
 	}
-	if req.UserID == "" {
+	if req.Username == "" {
 		return errs.ErrCallbackUserIDMissing
 	}
 	if req.Status == "" {

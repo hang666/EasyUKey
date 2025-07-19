@@ -226,7 +226,7 @@ func ProcessAuthResponse(sessionID string, authResp *messages.AuthResponseMessag
 func StartAuth(req *request.AuthRequest, apiKey *entity.APIKey) (*entity.AuthSession, error) {
 	// 查找用户
 	var user entity.User
-	result := global.DB.Where("username = ? AND is_active = ?", req.UserID, true).First(&user)
+	result := global.DB.Where("username = ? AND is_active = ?", req.Username, true).First(&user)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return nil, errs.ErrUserNotFound
@@ -293,7 +293,7 @@ func StartAuth(req *request.AuthRequest, apiKey *entity.APIKey) (*entity.AuthSes
 	// 发送WebSocket消息给用户
 	authMsg := messages.AuthRequestMessage{
 		RequestID: sessionID,
-		UserID:    req.UserID,
+		Username:  req.Username,
 		Challenge: req.Challenge,
 		Action:    req.Action,
 		Message:   req.Message,
@@ -328,7 +328,7 @@ func sendAuthCallback(session *entity.AuthSession, serialNumber string) {
 	// 构建回调请求
 	callbackReq := &messages.CallbackRequest{
 		SessionID: session.ID,
-		UserID:    fmt.Sprintf("%d", session.UserID),
+		Username:  fmt.Sprintf("%d", session.UserID),
 		Challenge: session.Challenge,
 		Action:    session.Action,
 		Timestamp: time.Now().Unix(),
@@ -410,9 +410,9 @@ func getAPIKeyBySession(session *entity.AuthSession) (string, error) {
 
 // VerifyAuth 验证认证结果
 func VerifyAuth(req *request.VerifyAuthRequest) (*entity.AuthSession, error) {
-	// 查找认证会话
+	// 查找认证会话并预加载用户信息
 	var session entity.AuthSession
-	result := global.DB.Where("id = ?", req.SessionID).First(&session)
+	result := global.DB.Preload("User").Where("id = ?", req.SessionID).First(&session)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return nil, errs.ErrSessionNotFound

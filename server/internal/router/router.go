@@ -30,7 +30,7 @@ func SetupRoutes(e *echo.Echo) {
 	// 认证相关路由（需要普通API密钥）
 	auth := apiV1.Group("", middleware.APIAuth(false))
 	{
-		auth.POST("/users/:username/auth", api.StartAuth)
+		auth.POST("/auth", api.StartAuth)
 		auth.POST("/auth/verify", api.VerifyAuth)
 	}
 

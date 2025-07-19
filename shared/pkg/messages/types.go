@@ -15,7 +15,7 @@ type WSMessage struct {
 // AuthRequestMessage 认证请求消息
 type AuthRequestMessage struct {
 	RequestID   string `json:"request_id"`
-	UserID      string `json:"user_id"`
+	Username    string `json:"username"`
 	Challenge   string `json:"challenge"`
 	Action      string `json:"action,omitempty"`
 	Message     string `json:"message"`
@@ -131,7 +131,7 @@ const (
 // CallbackRequest 回调请求数据结构
 type CallbackRequest struct {
 	SessionID string `json:"session_id"` // 认证会话ID
-	UserID    string `json:"user_id"`    // 用户唯一标识
+	Username  string `json:"username"`   // 用户唯一标识
 	Status    string `json:"status"`     // 认证结果：success/failed
 	Challenge string `json:"challenge"`  // 认证挑战码
 	Action    string `json:"action"`     // 操作权限

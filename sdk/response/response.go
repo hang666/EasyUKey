@@ -19,9 +19,10 @@ type AuthData struct {
 
 // VerifyAuthData 验证认证数据
 type VerifyAuthData struct {
-	Success bool   `json:"success"`
-	UserID  uint   `json:"user_id,omitempty"`
-	Message string `json:"message,omitempty"`
+	Success  bool   `json:"success"`
+	UserID   uint   `json:"user_id,omitempty"`
+	Username string `json:"username,omitempty"`
+	Message  string `json:"message,omitempty"`
 }
 
 // DeviceStatistics 设备统计数据

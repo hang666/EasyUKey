@@ -48,12 +48,12 @@ func (h *AuthHelper) SimpleAuth(username, apiKey string) (*response.VerifyAuthDa
 
 	// 发起认证
 	authReq := &request.AuthRequest{
-		UserID:    username,
+		Username:  username,
 		Challenge: challenge,
 		Timeout:   60,
 	}
 
-	authData, err := h.client.StartAuth(username, authReq)
+	authData, err := h.client.StartAuth(authReq)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", errs.ErrAuthStartFailed, err)
 	}
@@ -98,14 +98,14 @@ func (h *AuthHelper) QuickAuth(username, apiKey, action, message string) (*respo
 	}
 
 	authReq := &request.AuthRequest{
-		UserID:    username,
+		Username:  username,
 		Challenge: challenge,
 		Action:    action,
 		Message:   message,
 		Timeout:   60,
 	}
 
-	authData, err := h.client.StartAuth(username, authReq)
+	authData, err := h.client.StartAuth(authReq)
 	if err != nil {
 		return nil, err
 	}

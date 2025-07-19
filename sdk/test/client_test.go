@@ -11,11 +11,10 @@ func TestAuth(t *testing.T) {
 	client := sdk.NewClient("http://localhost:8888", "admin-key-easyukey-2024")
 
 	authData, err := client.StartAuth(
-		"testuser",
 		&request.AuthRequest{
+			Username:  "testuser",
 			Challenge: "123456",
 			Timeout:   600,
-			UserID:    "testuser",
 			Action:    "",
 			Message:   "test",
 		},

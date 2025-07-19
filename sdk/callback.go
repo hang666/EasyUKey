@@ -25,7 +25,7 @@ func ValidateCallbackRequest(data []byte, secret string) (*request.CallbackReque
 	if req.SessionID == "" {
 		return nil, errs.ErrMissingSessionID
 	}
-	if req.UserID == "" {
+	if req.Username == "" {
 		return nil, errs.ErrMissingUserID
 	}
 	if req.Status == "" {
@@ -71,7 +71,7 @@ func generateCallbackSignature(req *request.CallbackRequest, secret string) stri
 	// 构建签名字符串
 	data := map[string]string{
 		"session_id": req.SessionID,
-		"user_id":    req.UserID,
+		"username":   req.Username,
 		"status":     req.Status,
 		"challenge":  req.Challenge,
 		"action":     req.Action,

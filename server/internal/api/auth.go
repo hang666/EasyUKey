@@ -14,15 +14,14 @@ import (
 
 // StartAuth 发起用户认证
 func StartAuth(c echo.Context) error {
-	username := c.Param("username")
-
 	var req request.AuthRequest
 	if err := bindAndValidate(c, &req); err != nil {
 		return err
 	}
 
-	req.UserID = username
-
+	if req.Username == "" {
+		return errs.ErrMissingUsername
+	}
 	if req.Challenge == "" {
 		return errs.ErrMissingChallenge
 	}
@@ -65,9 +64,15 @@ func VerifyAuth(c echo.Context) error {
 	}
 
 	verifyData := &response.VerifyAuthData{
-		Success: session.Status == "completed",
-		UserID:  session.UserID,
-		Message: "验证成功",
+		Success:  session.Status == "completed",
+		UserID:   session.UserID,
+		Username: "",
+		Message:  "验证成功",
+	}
+
+	// 如果用户信息已加载，则填充Username
+	if session.User != nil {
+		verifyData.Username = session.User.Username
 	}
 
 	return c.JSON(http.StatusOK, &response.Response{

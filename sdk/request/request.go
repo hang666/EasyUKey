@@ -2,7 +2,7 @@ package request
 
 // AuthRequest 认证请求
 type AuthRequest struct {
-	UserID      string `json:"user_id"`
+	Username    string `json:"username"`
 	Challenge   string `json:"challenge"`
 	Action      string `json:"action,omitempty"`
 	Message     string `json:"message,omitempty"`
@@ -13,7 +13,7 @@ type AuthRequest struct {
 // CallbackRequest 回调请求数据结构
 type CallbackRequest struct {
 	SessionID string `json:"session_id"`
-	UserID    string `json:"user_id"`
+	Username  string `json:"username"`
 	Status    string `json:"status"`
 	Challenge string `json:"challenge"`
 	Action    string `json:"action"`
