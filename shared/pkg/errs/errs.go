@@ -12,12 +12,7 @@ var (
 	ErrWSConnectFailed    = errors.New("WebSocket连接失败")
 
 	// 认证错误
-	ErrAuthChallengeInvalid = errors.New("挑战码不匹配")
-	ErrAuthTOTPInvalid      = errors.New("TOTP验证码无效")
-	ErrAuthInvalidKey       = errors.New("认证密钥无效")
-	ErrAuthSerialMismatch   = errors.New("设备序列号不匹配")
-	ErrAuthOnceKeyMismatch  = errors.New("一次性密钥不匹配")
-	ErrUserRejected         = errors.New("用户拒绝认证")
+	ErrUserRejected = errors.New("用户拒绝认证")
 
 	// 设备错误
 	ErrDeviceNotActive     = errors.New("设备未激活")

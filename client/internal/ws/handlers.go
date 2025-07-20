@@ -2,13 +2,13 @@ package ws
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 	"time"
 
 	"github.com/hang666/EasyUKey/client/internal/confirmation"
 	"github.com/hang666/EasyUKey/client/internal/device"
 	"github.com/hang666/EasyUKey/client/internal/global"
+	"github.com/hang666/EasyUKey/shared/pkg/auth"
 	"github.com/hang666/EasyUKey/shared/pkg/errs"
 	"github.com/hang666/EasyUKey/shared/pkg/identity"
 	"github.com/hang666/EasyUKey/shared/pkg/logger"
@@ -82,15 +82,20 @@ func handleAuthRequest(message messages.WSMessage) {
 		return
 	}
 
-	// 使用PIN生成完整密钥
-	fullKey, err := identity.GetFullKey(pin, global.Config.EncryptKeyStr, dev.SerialNumber, dev.VolumeSerialNumber, global.SecureStoragePath)
+	// 使用新格式生成认证token
+	authKey, err := auth.GenerateAuthToken(
+		authReq.Challenge,
+		pin,
+		global.Config.EncryptKeyStr,
+		dev.SerialNumber,
+		dev.VolumeSerialNumber,
+		global.SecureStoragePath,
+	)
 	if err != nil {
-		confirmation.SendResult(false, "密钥生成失败")
-		SendAuthResponse(authReq.RequestID, false, "", "", dev.SerialNumber, dev.VolumeSerialNumber, "密钥生成失败")
+		confirmation.SendResult(false, "认证token生成失败")
+		SendAuthResponse(authReq.RequestID, false, "", "", dev.SerialNumber, dev.VolumeSerialNumber, "认证token生成失败")
 		return
 	}
-
-	authKey := fmt.Sprintf("%s:_:%s", authReq.Challenge, fullKey)
 
 	// 保存PIN以供后续更新OnceKey使用
 	global.PinManager.SendPIN(pin)

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"time"
 
 	"github.com/hang666/EasyUKey/shared/pkg/errs"
 )
@@ -90,31 +89,6 @@ func GetOnceKey(pin, encryptKey, basePath string) (string, error) {
 		return "", err
 	}
 	return string(data), nil
-}
-
-// GetFullKey 生成完整认证密钥
-func GetFullKey(pin, encryptKey, serialNumber, volumeSerialNumber, basePath string) (string, error) {
-	onceKey, err := GetOnceKey(pin, encryptKey, basePath)
-	if err != nil {
-		return "", err
-	}
-
-	totpURI, err := GetTOTPSecret(pin, encryptKey, basePath)
-	if err != nil {
-		return "", err
-	}
-
-	totpConfig, err := ParseTOTPURI(totpURI)
-	if err != nil {
-		return "", err
-	}
-
-	totpCode, err := GenerateTOTPCode(totpConfig, time.Now())
-	if err != nil {
-		return "", err
-	}
-
-	return fmt.Sprintf("%s:_:%s:_:%s:_:%s", onceKey, totpCode, serialNumber, volumeSerialNumber), nil
 }
 
 // SaveInitialKeys 保存初始化密钥

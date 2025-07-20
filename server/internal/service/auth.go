@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -15,9 +14,9 @@ import (
 	"github.com/hang666/EasyUKey/sdk/request"
 	"github.com/hang666/EasyUKey/server/internal/global"
 	"github.com/hang666/EasyUKey/server/internal/model/entity"
+	"github.com/hang666/EasyUKey/shared/pkg/auth"
 	"github.com/hang666/EasyUKey/shared/pkg/callback"
 	"github.com/hang666/EasyUKey/shared/pkg/errs"
-	"github.com/hang666/EasyUKey/shared/pkg/identity"
 	"github.com/hang666/EasyUKey/shared/pkg/logger"
 	"github.com/hang666/EasyUKey/shared/pkg/messages"
 )
@@ -63,46 +62,17 @@ func ValidateAuthKey(authKey string, deviceID uint, challenge string) (*entity.D
 		return nil, errs.ErrDeviceNotActive
 	}
 
-	// 解析认证密钥格式: {challenge}:_:{onceKey}:_:{totpCode}:_:{serialNumber}:_:{volumeSerialNumber}
-	parts := strings.Split(authKey, ":_:")
-	if len(parts) != 5 {
-		return nil, errs.ErrAuthInvalidKey
-	}
-
-	receivedChallenge := parts[0]
-	receivedOnceKey := parts[1]
-	receivedTOTPCode := parts[2]
-	receivedSerialNumber := parts[3]
-	receivedVolumeSerial := parts[4]
-
-	// 验证挑战码
-	if receivedChallenge != challenge {
-		return nil, errs.ErrAuthChallengeInvalid
-	}
-
-	// 验证设备序列号
-	if receivedSerialNumber != device.SerialNumber || receivedVolumeSerial != device.VolumeSerialNumber {
-		return nil, errs.ErrAuthSerialMismatch
-	}
-
-	// 验证OnceKey
-	if receivedOnceKey != device.OnceKey {
-		return nil, errs.ErrAuthOnceKeyMismatch
-	}
-
-	// 验证TOTP代码
-	totpConfig, err := identity.ParseTOTPURI(device.TOTPSecret)
-	if err != nil {
-		return nil, fmt.Errorf("解析TOTP密钥失败: %w", err)
-	}
-
-	isValidTOTP, err := identity.VerifyTOTPCode(totpConfig, receivedTOTPCode, time.Now())
-	if err != nil {
-		return nil, fmt.Errorf("验证TOTP验证码失败: %w", err)
-	}
-
-	if !isValidTOTP {
-		return nil, errs.ErrAuthTOTPInvalid
+	// 使用新的HMAC-SHA256格式验证认证token
+	if err := auth.ValidateAuthToken(
+		authKey,
+		challenge,
+		device.OnceKey,
+		device.TOTPSecret,
+		device.SerialNumber,
+		device.VolumeSerialNumber,
+		global.Config.Security.EncryptionKey,
+	); err != nil {
+		return nil, fmt.Errorf("认证token验证失败: %w", err)
 	}
 
 	return &device, nil
