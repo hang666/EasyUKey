@@ -64,6 +64,19 @@ func HandleConfirmPage(c echo.Context) error {
 		}
 	}
 
+	// 检查当前认证状态，防止重复打开页面
+	currentState, currentReqID := confirmation.GetCurrentState()
+	if currentReqID == request.ID {
+		switch currentState {
+		case confirmation.StateProcessing:
+			return renderErrorPage(c, http.StatusConflict, "认证进行中", "认证正在处理中，请稍候...")
+		case confirmation.StateCompleted:
+			return renderErrorPage(c, http.StatusConflict, "认证已完成", "认证已完成，请勿重复提交。")
+		}
+	} else if currentState != confirmation.StateIdle && currentState != confirmation.StateWaiting {
+		return renderErrorPage(c, http.StatusConflict, "认证冲突", "当前有其他认证请求正在处理，请稍后再试。")
+	}
+
 	data := map[string]interface{}{
 		"Request":    *request,
 		"RawRequest": encodedRequest,
@@ -88,6 +101,31 @@ func HandleConfirmAction(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ConfirmActionResponse{
 			Message:       err.Error(),
+			Status:        ConfirmActionStatusError,
+			ConfirmStatus: false,
+		})
+	}
+
+	// 检查当前认证状态，防止重复提交
+	currentState, currentReqID := confirmation.GetCurrentState()
+	if currentReqID == request.ID {
+		switch currentState {
+		case confirmation.StateProcessing:
+			return c.JSON(http.StatusOK, ConfirmActionResponse{
+				Message:       "认证正在处理中，请稍候...",
+				Status:        ConfirmActionStatusError,
+				ConfirmStatus: false,
+			})
+		case confirmation.StateCompleted:
+			return c.JSON(http.StatusOK, ConfirmActionResponse{
+				Message:       "认证已完成，请勿重复提交",
+				Status:        ConfirmActionStatusError,
+				ConfirmStatus: false,
+			})
+		}
+	} else if currentState != confirmation.StateIdle && currentState != confirmation.StateWaiting {
+		return c.JSON(http.StatusOK, ConfirmActionResponse{
+			Message:       "当前有其他认证请求正在处理",
 			Status:        ConfirmActionStatusError,
 			ConfirmStatus: false,
 		})
