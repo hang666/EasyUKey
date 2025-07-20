@@ -7,7 +7,7 @@ COPY . .
 WORKDIR /app/server
 RUN go mod download
 
-RUN CGO_ENABLED=0 GOOS=linux go build -o /app/easyukey-server .
+RUN CGO_ENABLED=0 GOOS=linux go build -o /app/easyukey-server -trimpath -ldflags "-w -s -buildid=" .
 
 FROM alpine:latest
 

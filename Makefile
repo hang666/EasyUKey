@@ -17,10 +17,10 @@ $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
 
 server: $(BUILD_DIR)
-	cd server && $(SERVER_GO_ENV) go build -o ../$(BUILD_DIR)/easyukey-server .
+	cd server && $(SERVER_GO_ENV) go build -o ../$(BUILD_DIR)/easyukey-server -trimpath -ldflags "-w -s -buildid=" .
 
 client: $(BUILD_DIR)
-	cd client && $(CLIENT_GO_ENV) go build -o ../$(BUILD_DIR)/easyukey-client.exe -ldflags "$(CLIENT_LDFLAGS)" .
+	cd client && $(CLIENT_GO_ENV) go build -o ../$(BUILD_DIR)/easyukey-client.exe -trimpath -ldflags "$(CLIENT_LDFLAGS) -w -s -buildid=" .
 
 clean:
 	rm -rf $(BUILD_DIR)
