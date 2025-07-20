@@ -152,6 +152,7 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("database.host", "localhost")
 	v.SetDefault("database.port", 3306)
 	v.SetDefault("database.username", "easyukey")
+	v.SetDefault("database.password", "easyukey")
 	v.SetDefault("database.database", "easyukey")
 	v.SetDefault("database.charset", "utf8mb4")
 	v.SetDefault("database.max_idle_connections", 10)
