@@ -80,7 +80,6 @@ func TestStartAuth(t *testing.T) {
 			Message:   "SDK测试认证",
 		},
 	)
-
 	if err != nil {
 		t.Logf("StartAuth失败: %v (这是正常的，如果服务器未运行或用户不存在)", err)
 		return
@@ -106,7 +105,6 @@ func TestVerifyAuth(t *testing.T) {
 			SessionID: "test-session-id",
 		},
 	)
-
 	if err != nil {
 		t.Logf("VerifyAuth失败: %v (这是正常的，会话ID不存在)", err)
 		return
@@ -129,7 +127,6 @@ func TestAuthWorkflow(t *testing.T) {
 			Message:   "SDK工作流测试",
 		},
 	)
-
 	if err != nil {
 		t.Logf("StartAuth失败: %v (跳过后续测试)", err)
 		return
@@ -143,7 +140,6 @@ func TestAuthWorkflow(t *testing.T) {
 			SessionID: authData.SessionID,
 		},
 	)
-
 	if err != nil {
 		t.Logf("VerifyAuth失败: %v", err)
 		return
@@ -151,7 +147,6 @@ func TestAuthWorkflow(t *testing.T) {
 
 	t.Logf("VerifyAuth结果: Success=%v, UserID=%d, Username=%s",
 		verifyData.Success, verifyData.UserID, verifyData.Username)
-
 }
 
 // TestAuthWorkflowWithPolling 测试完整认证流程（带轮询验证）
@@ -168,7 +163,6 @@ func TestAuthWorkflowWithPolling(t *testing.T) {
 			Message:   "SDK轮询测试",
 		},
 	)
-
 	if err != nil {
 		t.Logf("StartAuth失败: %v (跳过后续测试)", err)
 		return
@@ -182,7 +176,6 @@ func TestAuthWorkflowWithPolling(t *testing.T) {
 			SessionID: authData.SessionID,
 		},
 	)
-
 	if err != nil {
 		t.Logf("VerifyAuth失败: %v", err)
 		return
@@ -207,7 +200,6 @@ func TestAuthWorkflowWithPolling(t *testing.T) {
 					SessionID: authData.SessionID,
 				},
 			)
-
 			if err != nil {
 				t.Logf("轮询VerifyAuth失败: %v", err)
 				continue

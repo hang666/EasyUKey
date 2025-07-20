@@ -120,11 +120,6 @@ func ProcessAuthResponse(sessionID string, authResp *messages.AuthResponseMessag
 		return fmt.Errorf("查询认证会话失败: %w", result.Error)
 	}
 
-	// 检查会话状态
-	if session.Status != entity.AuthStatusPending {
-		return fmt.Errorf("认证会话状态无效: %s", session.Status)
-	}
-
 	// 检查是否过期
 	if session.ExpiresAt.Before(time.Now()) {
 		// 更新会话状态为过期
@@ -132,6 +127,17 @@ func ProcessAuthResponse(sessionID string, authResp *messages.AuthResponseMessag
 			"status": entity.AuthStatusExpired,
 		})
 		return errs.ErrSessionExpired
+	}
+
+	// 原子性更新会话状态为处理中，防止重复处理
+	updateResult := global.DB.Model(&session).
+		Where("id = ? AND status = ?", sessionID, entity.AuthStatusPending).
+		Update("status", entity.AuthStatusProcessing)
+	if updateResult.Error != nil {
+		return fmt.Errorf("更新会话状态失败: %w", updateResult.Error)
+	}
+	if updateResult.RowsAffected == 0 {
+		return fmt.Errorf("认证会话已被处理或状态无效: %s", session.Status)
 	}
 
 	// 首先验证设备和密钥（无论成功还是失败都需要验证）
