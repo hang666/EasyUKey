@@ -17,7 +17,7 @@ EasyUKey 是一个基于USB设备的开源高安全性认证服务解决方案�
 * **开源透明**：所有代码完全开源，由社区驱动，安全、可信赖。
 * **易于集成**：可以轻松地集成到您现有的服务或应用中，作为多因素认证（MFA）的一环。
 
-## 🚀 它是如何工作的？
+## 🚀 工作原理
 
 EasyUKey 通过在您的U盘上创建一个唯一的、经过加密的密钥文件来识别您的身份。
 
@@ -27,9 +27,7 @@ EasyUKey 通过在您的U盘上创建一个唯一的、经过加密的密钥文�
 
 整个过程就像使用银行U盾一样简单，但硬件载体却是您最常见的U盘。
 
-## 📋 验证方案
-
-### 认证流程
+## 📋 认证流程
 
 1. **应用系统发起认证**：第三方应用向EasyUKey服务器提交认证请求
 2. **服务器转发请求**：EasyUKey服务器将认证请求转发给对应的USB客户端
@@ -48,43 +46,11 @@ EasyUKey 通过在您的U盘上创建一个唯一的、经过加密的密钥文�
 * **依赖**：Go, Git, Make
 * **Docker部署**：Docker, Docker Compose
 
-### 安装部署
+### 服务端安装
 
-#### 方式一：传统部署
+#### 方式一：Docker部署（推荐）
 
-1. **克隆项目**
-
-```bash
-git clone https://github.com/hang666/EasyUKey.git
-cd EasyUKey
-```
-
-2. **构建应用**
-
-```bash
-# 构建服务器
-make server
-# 构建客户端 需要设置加密密钥和服务器地址
-make client ENCRYPT_KEY_STR=123456789 SERVER_ADDR=http://localhost:8888
-```
-
-3. **配置服务器**
-
-```bash
-# 编辑配置文件，设置数据库连接等
-cp server/config.example.yaml server/config.yaml
-```
-
-4. **运行服务器**
-
-```bash
-cd build
-./easyukey-server
-```
-
-#### 方式二：Docker部署
-
-1. **克隆项目**
+1. **克隆项目 (或直接下载docker-compose.yml文件)**
 
 ```bash
 git clone https://github.com/hang666/EasyUKey.git
@@ -102,24 +68,18 @@ cp .env.example .env
 # openssl rand -hex 32
 ```
 
-3. **选择部署方式**
+3. **启动服务**
 
-**使用外部MySQL（推荐用于生产环境）：**
+**使用外部MySQL（生产环境推荐）：**
 
 ```bash
-# 编辑.env文件，配置外部数据库连接信息：
-# EASYUKEY_DATABASE_HOST=your-mysql-host
-# EASYUKEY_DATABASE_PASSWORD=your-mysql-password
-# 等等...
-
-# 启动服务（使用外部MySQL数据库）
+# 编辑.env文件，配置外部数据库连接信息
 docker-compose up -d
 ```
 
-**使用内置MySQL（推荐用于开发测试）：**
+**使用内置MySQL（开发测试推荐）：**
 
 ```bash
-# 启动服务（包含MySQL数据库）
 docker-compose -f docker-compose.db.yml up -d
 ```
 
@@ -135,16 +95,42 @@ docker-compose logs -f server
 
 服务启动后可访问：<http://localhost:8888/admin> 管理页面
 
-### 客户端部署
+#### 方式二：传统部署
 
-1. 构建客户端
+1. **构建服务器**
 
 ```bash
-# 构建客户端
+make server
+```
+
+2. **配置服务器**
+
+```bash
+cp server/config.example.yaml server/config.yaml
+# 编辑配置文件，设置数据库连接等
+```
+
+3. **运行服务器**
+
+```bash
+cd build
+./easyukey-server
+```
+
+### 客户端安装
+
+1. **构建客户端**
+
+```bash
+# 设置加密密钥和服务器地址
 make client ENCRYPT_KEY_STR=123456789 SERVER_ADDR=http://localhost:8888
 ```
 
-2. 将构建好的客户端复制到USB设备打开即可使用
+2. **部署到USB设备**
+
+将构建好的客户端复制到USB设备
+在USB设备上运行客户端程序即可使用
+需在管理后台添加用户将设备与用户绑定
 
 ## 🎯 使用场景
 
@@ -162,14 +148,8 @@ make client ENCRYPT_KEY_STR=123456789 SERVER_ADDR=http://localhost:8888
 ## 📝 TODO
 
 * [ ] 实现多平台支持
-* [x] client端使用pin+encryption_key加密存储信息
-* [x] 通信加密
-* [x] 异步回调
 * [ ] 完善认证流程细节
-* [x] 客户端认证接口同步返回结果
 * [ ] 完善管理页面
-* [x] 完善错误处理
-* [x] 完善日志
 * [ ] 完善文档
 
 ## 🤝 贡献指南
