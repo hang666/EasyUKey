@@ -12,13 +12,13 @@ import (
 
 // AdminClient 管理员客户端
 type AdminClient struct {
-	*Client
+	*APIClient
 }
 
 // NewAdminClient 创建管理员客户端
 func NewAdminClient(baseURL, adminKey string) *AdminClient {
 	return &AdminClient{
-		Client: NewClient(baseURL, adminKey),
+		APIClient: NewClient(baseURL, adminKey),
 	}
 }
 

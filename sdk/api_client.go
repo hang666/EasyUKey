@@ -13,16 +13,16 @@ import (
 	"github.com/hang666/EasyUKey/sdk/response"
 )
 
-// Client EasyUKey SDK客户端
-type Client struct {
+// APIClient EasyUKey SDK客户端
+type APIClient struct {
 	baseURL    string
 	httpClient *http.Client
 	apiKey     string
 }
 
 // NewClient 创建新的SDK客户端
-func NewClient(baseURL, apiKey string) *Client {
-	return &Client{
+func NewClient(baseURL, apiKey string) *APIClient {
+	return &APIClient{
 		baseURL: baseURL,
 		apiKey:  apiKey,
 		httpClient: &http.Client{
@@ -32,17 +32,17 @@ func NewClient(baseURL, apiKey string) *Client {
 }
 
 // SetTimeout 设置请求超时时间
-func (c *Client) SetTimeout(timeout time.Duration) {
+func (c *APIClient) SetTimeout(timeout time.Duration) {
 	c.httpClient.Timeout = timeout
 }
 
 // SetAPIKey 设置API密钥
-func (c *Client) SetAPIKey(apiKey string) {
+func (c *APIClient) SetAPIKey(apiKey string) {
 	c.apiKey = apiKey
 }
 
 // 发送HTTP请求的通用方法
-func (c *Client) request(method, path string, body interface{}) (*response.Response, error) {
+func (c *APIClient) request(method, path string, body interface{}) (*response.Response, error) {
 	var reqBody io.Reader
 	if body != nil {
 		jsonData, err := json.Marshal(body)
@@ -85,7 +85,7 @@ func (c *Client) request(method, path string, body interface{}) (*response.Respo
 }
 
 // StartAuth 发起用户认证
-func (c *Client) StartAuth(req *request.AuthRequest) (*response.AuthData, error) {
+func (c *APIClient) StartAuth(req *request.AuthRequest) (*response.AuthData, error) {
 	resp, err := c.request("POST", "/api/v1/auth", req)
 	if err != nil {
 		return nil, err
@@ -100,7 +100,7 @@ func (c *Client) StartAuth(req *request.AuthRequest) (*response.AuthData, error)
 }
 
 // VerifyAuth 验证认证结果
-func (c *Client) VerifyAuth(req *request.VerifyAuthRequest) (*response.VerifyAuthData, error) {
+func (c *APIClient) VerifyAuth(req *request.VerifyAuthRequest) (*response.VerifyAuthData, error) {
 	resp, err := c.request("POST", "/api/v1/auth/verify", req)
 	if err != nil {
 		return nil, err
@@ -115,7 +115,7 @@ func (c *Client) VerifyAuth(req *request.VerifyAuthRequest) (*response.VerifyAut
 }
 
 // Health 健康检查
-func (c *Client) Health() (map[string]string, error) {
+func (c *APIClient) Health() (map[string]string, error) {
 	resp, err := c.request("GET", "/health", nil)
 	if err != nil {
 		return nil, err

@@ -13,11 +13,11 @@ import (
 
 // AuthHelper 认证助手
 type AuthHelper struct {
-	client *Client
+	client *APIClient
 }
 
 // NewAuthHelper 创建认证助手
-func NewAuthHelper(client *Client) *AuthHelper {
+func NewAuthHelper(client *APIClient) *AuthHelper {
 	return &AuthHelper{client: client}
 }
 
