@@ -198,10 +198,8 @@ func ProcessAuthResponse(sessionID string, authResp *messages.AuthResponseMessag
 	}
 
 	if authResp.Success {
-		// 认证成功
-		updates["result"] = entity.AuthResultSuccess
-		updates["status"] = entity.AuthStatusCompleted
-		logger.Logger.Info("认证成功", "session_id", sessionID, "device_id", validDevice.ID)
+		updates["status"] = entity.AuthStatusProcessingOnceKey
+		logger.Logger.Info("用户同意认证，开始处理OnceKey更新", "session_id", sessionID, "device_id", validDevice.ID)
 	} else {
 		// 认证失败，区分用户拒绝和其他失败情况
 		updates["result"] = entity.AuthResultFailure
@@ -218,11 +216,6 @@ func ProcessAuthResponse(sessionID string, authResp *messages.AuthResponseMessag
 	// 更新数据库
 	if err := global.DB.Model(&session).Updates(updates).Error; err != nil {
 		return fmt.Errorf("更新认证会话失败: %w", err)
-	}
-
-	// 如果有回调URL，发送异步回调
-	if session.CallbackURL != "" {
-		go sendAuthCallback(&session, authResp.SerialNumber)
 	}
 
 	return nil
@@ -404,14 +397,43 @@ func sendHTTPCallback(url string, req *messages.CallbackRequest) bool {
 	return false
 }
 
-// getAPIKeyBySession 通过会话获取API密钥
-func getAPIKeyBySession(session *entity.AuthSession) (string, error) {
-	var apiKey entity.APIKey
-	err := global.DB.Where("id = ?", session.APIKeyID).First(&apiKey).Error
-	if err != nil {
-		return "", fmt.Errorf("查找API密钥失败: %w", err)
+// CompleteOnceKeyUpdateAuth 完成OnceKey更新后的认证
+func CompleteOnceKeyUpdateAuth(requestID string, success bool, errorMessage string) error {
+	// 查找正在处理OnceKey的认证会话
+	var session entity.AuthSession
+	result := global.DB.Where("id = ? AND status = ?", requestID, entity.AuthStatusProcessingOnceKey).First(&session)
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			logger.Logger.Warn("未找到正在处理OnceKey的认证会话", "request_id", requestID)
+			return nil // 不返回错误，避免影响其他流程
+		}
+		return fmt.Errorf("查询认证会话失败: %w", result.Error)
 	}
-	return apiKey.APIKey, nil
+
+	updates := map[string]interface{}{}
+
+	if success {
+		// OnceKey更新确认成功
+		updates["status"] = entity.AuthStatusCompleted
+		updates["result"] = entity.AuthResultSuccess
+		logger.Logger.Info("OnceKey更新确认成功，认证完成", "session_id", requestID)
+	} else {
+		// OnceKey更新确认失败，认证失败
+		updates["status"] = entity.AuthStatusFailed
+		updates["result"] = entity.AuthResultFailure
+		logger.Logger.Error("OnceKey更新确认失败，认证失败", "session_id", requestID, "error", errorMessage)
+	}
+
+	// 更新认证会话状态
+	if err := global.DB.Model(&session).Updates(updates).Error; err != nil {
+		return fmt.Errorf("更新认证会话状态失败: %w", err)
+	}
+
+	if success && session.CallbackURL != "" {
+		go sendAuthCallback(&session, "")
+	}
+
+	return nil
 }
 
 // VerifyAuth 验证认证结果
@@ -432,4 +454,14 @@ func VerifyAuth(req *request.VerifyAuthRequest) (*entity.AuthSession, error) {
 	}
 
 	return &session, nil
+}
+
+// getAPIKeyBySession 通过会话获取API密钥
+func getAPIKeyBySession(session *entity.AuthSession) (string, error) {
+	var apiKey entity.APIKey
+	err := global.DB.Where("id = ?", session.APIKeyID).First(&apiKey).Error
+	if err != nil {
+		return "", fmt.Errorf("查找API密钥失败: %w", err)
+	}
+	return apiKey.APIKey, nil
 }

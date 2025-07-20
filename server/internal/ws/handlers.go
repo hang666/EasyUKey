@@ -137,22 +137,26 @@ func handleAuthResponse(client *Client, wsMsg *messages.WSMessage) error {
 		return err
 	}
 
-	// 如果认证成功且客户端提供了使用过的OnceKey，需要生成新的OnceKey
-	if authResp.Success && authResp.UsedKey != "" {
+	// 如果用户同意认证，需要生成新的OnceKey
+	if authResp.Success {
 		newOnceKey, err := service.UpdateDeviceOnceKey(client.DeviceID, authResp.UsedKey)
 		if err != nil {
-			// 这里不返回错误，因为认证已经成功，OnceKey更新失败不应该影响认证结果
-		} else {
-			// 发送新的OnceKey给客户端
-			successResp := &messages.AuthSuccessResponseMessage{
-				RequestID:  authResp.RequestID,
-				Success:    true,
-				NewOnceKey: newOnceKey,
-			}
+			logger.Logger.Error("OnceKey更新失败", "request_id", authResp.RequestID, "error", err)
+			service.CompleteOnceKeyUpdateAuth(authResp.RequestID, false, fmt.Sprintf("OnceKey更新失败: %v", err))
+			return err
+		}
 
-			if err := sendMessageToClient(client, "auth_success_response", successResp); err != nil {
-				// 忽略发送错误
-			}
+		// 发送新的OnceKey给客户端
+		successResp := &messages.AuthSuccessResponseMessage{
+			RequestID:  authResp.RequestID,
+			Success:    true,
+			NewOnceKey: newOnceKey,
+		}
+
+		if err := sendMessageToClient(client, "auth_success_response", successResp); err != nil {
+			logger.Logger.Error("发送新OnceKey失败", "request_id", authResp.RequestID, "error", err)
+			service.CompleteOnceKeyUpdateAuth(authResp.RequestID, false, fmt.Sprintf("发送新OnceKey失败: %v", err))
+			return err
 		}
 	}
 
@@ -168,8 +172,15 @@ func handleOnceKeyUpdate(client *Client, wsMsg *messages.WSMessage) error {
 		return err
 	}
 
-	// 记录OnceKey更新确认
-	if !confirmMsg.Success {
+	// 完成OnceKey更新后的认证流程
+	if err := service.CompleteOnceKeyUpdateAuth(confirmMsg.RequestID, confirmMsg.Success, confirmMsg.Error); err != nil {
+		logger.Logger.Error("完成OnceKey更新认证失败", "request_id", confirmMsg.RequestID, "error", err)
+		return err
+	}
+
+	if confirmMsg.Success {
+		logger.Logger.Info("OnceKey更新确认成功，认证流程已完成", "request_id", confirmMsg.RequestID, "device_id", client.DeviceID)
+	} else {
 		logger.Logger.Error("OnceKey更新确认失败", "request_id", confirmMsg.RequestID, "error", confirmMsg.Error)
 	}
 

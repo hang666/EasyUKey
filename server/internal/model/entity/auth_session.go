@@ -35,12 +35,13 @@ func (AuthSession) TableName() string {
 
 // 认证状态常量
 const (
-	AuthStatusPending    = "pending"
-	AuthStatusProcessing = "processing"
-	AuthStatusCompleted  = "completed"
-	AuthStatusFailed     = "failed"
-	AuthStatusExpired    = "expired"
-	AuthStatusRejected   = "rejected"
+	AuthStatusPending           = "pending"
+	AuthStatusProcessing        = "processing"
+	AuthStatusProcessingOnceKey = "processing_oncekey"
+	AuthStatusCompleted         = "completed"
+	AuthStatusFailed            = "failed"
+	AuthStatusExpired           = "expired"
+	AuthStatusRejected          = "rejected"
 )
 
 // 认证结果常量
