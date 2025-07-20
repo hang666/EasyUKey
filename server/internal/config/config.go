@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/spf13/viper"
@@ -108,6 +109,7 @@ func InitConfig(configPath string) error {
 	// 设置环境变量前缀
 	v.SetEnvPrefix("EASYUKEY")
 	v.AutomaticEnv()
+	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 
 	// 设置默认值
 	setDefaults(v)
@@ -127,14 +129,6 @@ func InitConfig(configPath string) error {
 	config := &Config{}
 	if err := v.Unmarshal(config); err != nil {
 		return fmt.Errorf("解析配置失败: %w", err)
-	}
-
-	// 从环境变量中读取敏感信息
-	if password := os.Getenv("EASYUKEY_DATABASE_PASSWORD"); password != "" {
-		config.Database.Password = password
-	}
-	if encKey := os.Getenv("EASYUKEY_SECURITY_ENCRYPTION_KEY"); encKey != "" {
-		config.Security.EncryptionKey = encKey
 	}
 
 	// 验证配置
