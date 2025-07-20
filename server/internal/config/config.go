@@ -108,8 +108,9 @@ func InitConfig(configPath string) error {
 
 	// 设置环境变量前缀
 	v.SetEnvPrefix("EASYUKEY")
-	v.AutomaticEnv()
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	v.AllowEmptyEnv(false)
+	v.AutomaticEnv()
 
 	// 设置默认值
 	setDefaults(v)
@@ -166,10 +167,10 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("websocket.write_wait", "10s")
 	v.SetDefault("websocket.pong_wait", "60s")
 	v.SetDefault("websocket.ping_period", "54s")
-	v.SetDefault("websocket.max_message_size", 512)
+	v.SetDefault("websocket.max_message_size", 8192)
 	v.SetDefault("websocket.send_channel_buffer", 256)
-	v.SetDefault("websocket.read_buffer_size", 1024)
-	v.SetDefault("websocket.write_buffer_size", 1024)
+	v.SetDefault("websocket.read_buffer_size", 4096)
+	v.SetDefault("websocket.write_buffer_size", 4096)
 	v.SetDefault("websocket.enable_compression", false)
 	v.SetDefault("websocket.max_connections", 1000)
 	v.SetDefault("websocket.connection_timeout", "30s")
@@ -179,6 +180,9 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("log.level", "info")
 	v.SetDefault("log.format", "json")
 	v.SetDefault("log.output", "stdout")
+
+	// 安全默认配置
+	v.SetDefault("security.encryption_key", "")
 }
 
 // GetDatabaseDSN 获取数据库连接字符串

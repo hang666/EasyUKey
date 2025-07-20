@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"embed"
 	"flag"
 	"net/http"
 	"os"
@@ -20,6 +21,9 @@ import (
 	"github.com/hang666/EasyUKey/shared/pkg/logger"
 )
 
+//go:embed template
+var TemplateFS embed.FS
+
 func main() {
 	var configPath string
 	flag.StringVar(&configPath, "config", "", "配置文件路径")
@@ -31,7 +35,7 @@ func main() {
 
 	e := echo.New()
 
-	templateRenderer := api.NewTemplateRenderer("template")
+	templateRenderer := api.NewEmbedTemplateRenderer(TemplateFS)
 	e.Renderer = templateRenderer
 
 	e.HTTPErrorHandler = middleware.ErrorHandler

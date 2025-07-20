@@ -1,0 +1,48 @@
+# docker-compose.db.yml - 包含MySQL数据库的一体化部署版本（适合开发测试）
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: easyukey-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass123
+      MYSQL_DATABASE: easyukey
+      MYSQL_USER: easyukey
+      MYSQL_PASSWORD: easyukeypass123
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - easyukey-network
+    restart: unless-stopped
+
+  server:
+    image: hang666/easyukey-server:latest
+    container_name: easyukey-server
+    command: ["/app/easyukey-server", "-config", "/app/config.yaml"]
+    ports:
+      - "8888:8888"
+    depends_on:
+      - mysql
+    volumes:
+      - ./server/config.yaml:/app/config.yaml
+    environment:
+      # viper自动映射的环境变量（EASYUKEY前缀）
+      EASYUKEY_DATABASE_HOST: mysql
+      EASYUKEY_DATABASE_PORT: 3306
+      EASYUKEY_DATABASE_USERNAME: easyukey
+      EASYUKEY_DATABASE_PASSWORD: easyukeypass123
+      EASYUKEY_DATABASE_DATABASE: easyukey
+      # 用户必须在.env文件或环境中提供此值
+      EASYUKEY_SECURITY_ENCRYPTION_KEY: ${EASYUKEY_SECURITY_ENCRYPTION_KEY}
+    networks:
+      - easyukey-network
+    restart: unless-stopped
+
+volumes:
+  mysql_data:
+    driver: local
+
+networks:
+  easyukey-network:
+    driver: bridge

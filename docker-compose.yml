@@ -1,0 +1,22 @@
+# docker-compose.yml - 使用外部MySQL数据库的默认版本（推荐）
+services:
+  server:
+    image: hang666/easyukey-server:latest
+    container_name: easyukey-server
+    command: ["/app/easyukey-server", "-config", "/app/config.yaml"]
+    ports:
+      - "8888:8888"
+    volumes:
+      - ./server/config.yaml:/app/config.yaml
+    environment:
+      # 连接到外部MySQL数据库，请根据实际情况修改
+      EASYUKEY_DATABASE_HOST: ${EASYUKEY_DATABASE_HOST}
+      EASYUKEY_DATABASE_PORT: ${EASYUKEY_DATABASE_PORT}
+      EASYUKEY_DATABASE_USERNAME: ${EASYUKEY_DATABASE_USERNAME}
+      EASYUKEY_DATABASE_PASSWORD: ${EASYUKEY_DATABASE_PASSWORD}
+      EASYUKEY_DATABASE_DATABASE: ${EASYUKEY_DATABASE_DATABASE}
+      # 用户必须在.env文件或环境中提供此值
+      EASYUKEY_SECURITY_ENCRYPTION_KEY: ${EASYUKEY_SECURITY_ENCRYPTION_KEY}
+    restart: unless-stopped
+    # 如果MySQL运行在同一台机器上，需要使用host网络模式
+    # network_mode: "host"

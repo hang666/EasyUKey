@@ -4,36 +4,28 @@
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Development Status](https://img.shields.io/badge/status-Development-orange)](https://github.com/hang666/EasyUKey)
 
-EasyUKey 是一个基于USB设备的高安全性认证服务组件，提供简易U盾实现。采用客户端-服务器架构，使用实时WebSocket通信，集成多重加密保护和TOTP双因子认证。
+**将任何U盘变为您的专属安全密钥 (U盾)，无需特定硬件，即插即用。**
+
+EasyUKey 是一个基于USB设备的开源高安全性认证服务解决方案，提供简易U盾实现。采用客户端-服务器架构，使用实时WebSocket通信，集成多重加密保护和TOTP双因子认证。
 
 > ⚠️ **提醒**：本项目目前仍在开发阶段，基本功能已经实现，但功能和安全性依旧持续改进中，请谨慎用于生产环境。
 
-## 🚀 核心特性
+## ✨ 核心亮点
 
-### 🔐 多重安全防护
+* **极致便利**：将您随身携带的任何U盘转变为一个硬件U盾。无需购买或等待特定硬件。
+* **高安全性**：为您的敏感操作提供一层坚固的物理安全保障，有效防止未经授权的访问。
+* **开源透明**：所有代码完全开源，由社区驱动，安全、可信赖。
+* **易于集成**：可以轻松地集成到您现有的服务或应用中，作为多因素认证（MFA）的一环。
 
-- **硬件身份验证**：基于USB设备的物理身份验证
-- **双重设备识别**：同时验证U盘分区序列号和设备序列号，确保硬件唯一性
-- **OnceKey防复制**：动态一次性密钥机制，有效防止硬件复制攻击
-- **多层加密保护**：
-  - ECDH密钥交换（P-256曲线）
-  - AES-256-GCM端到端加密
-  - PIN码 + 加密密钥的安全存储
-- **TOTP双因子认证**：支持时间基础的一次性密码验证
-- **签名验证**：回调请求HMAC-SHA256签名防篡改
+## 🚀 它是如何工作的？
 
-### 🌐 实时通信架构
+EasyUKey 通过在您的U盘上创建一个唯一的、经过加密的密钥文件来识别您的身份。
 
-- **WebSocket Hub**：高并发连接管理，支持单点登录策略
-- **消息加密**：所有通信消息支持端到端加密
-- **心跳检测**：智能连接状态监控和自动重连
-- **设备状态同步**：实时设备在线状态同步
+1. **初始化**: 在您的U盘上生成一个安全的密钥。
+2. **认证**: 当需要进行安全认证时，系统会提示您插入U盘。
+3. **验证**: EasyUKey 会验证U盘上的密钥是否有效，验证通过后即可完成操作。
 
-### 🔧 开发友好
-
-- **Go SDK**：完整的Go语言SDK，支持认证、管理等所有功能
-- **RESTful API**：标准化的HTTP API接口
-- **异步回调**：支持认证结果异步回调通知
+整个过程就像使用银行U盾一样简单，但硬件载体却是您最常见的U盘。
 
 ## 📋 验证方案
 
@@ -52,10 +44,13 @@ EasyUKey 是一个基于USB设备的高安全性认证服务组件，提供简�
 
 ### 环境要求
 
-- **数据库**：MySQL 5.7+
-- **依赖**：Go, Git, Make
+* **数据库**：MySQL 5.7+
+* **依赖**：Go, Git, Make
+* **Docker部署**：Docker, Docker Compose
 
 ### 安装部署
+
+#### 方式一：传统部署
 
 1. **克隆项目**
 
@@ -87,35 +82,95 @@ cd build
 ./easyukey-server
 ```
 
-5. **部署客户端**
+#### 方式二：Docker部署
 
-将客户端复制到USB设备打开即可使用
+1. **克隆项目**
+
+```bash
+git clone https://github.com/hang666/EasyUKey.git
+cd EasyUKey
+```
+
+2. **配置环境变量**
+
+```bash
+# 复制环境变量示例文件
+cp .env.example .env
+
+# 编辑.env文件，设置必需的EASYUKEY_SECURITY_ENCRYPTION_KEY
+# 可以使用以下命令生成32位随机密钥：
+# openssl rand -hex 32
+```
+
+3. **选择部署方式**
+
+**使用外部MySQL（推荐用于生产环境）：**
+
+```bash
+# 编辑.env文件，配置外部数据库连接信息：
+# EASYUKEY_DATABASE_HOST=your-mysql-host
+# EASYUKEY_DATABASE_PASSWORD=your-mysql-password
+# 等等...
+
+# 启动服务（使用外部MySQL数据库）
+docker-compose up -d
+```
+
+**使用内置MySQL（推荐用于开发测试）：**
+
+```bash
+# 启动服务（包含MySQL数据库）
+docker-compose -f docker-compose.db.yml up -d
+```
+
+4. **验证部署**
+
+```bash
+# 查看服务状态
+docker-compose ps
+
+# 查看日志
+docker-compose logs -f server
+```
+
+服务启动后可访问：<http://localhost:8888/admin> 管理页面
+
+### 客户端部署
+
+1. 构建客户端
+
+```bash
+# 构建客户端
+make client ENCRYPT_KEY_STR=123456789 SERVER_ADDR=http://localhost:8888
+```
+
+2. 将构建好的客户端复制到USB设备打开即可使用
 
 ## 🎯 使用场景
 
 ### 企业级应用
 
-- **OA系统登录**：替代传统密码登录方式
-- **财务系统**：高安全性的金融交易认证
-- **数据中心**：服务器和设备的物理访问控制
+* **OA系统登录**：替代传统密码登录方式
+* **财务系统**：高安全性的金融交易认证
+* **数据中心**：服务器和设备的物理访问控制
 
 ### 开发集成
 
-- **Web应用**：集成到现有的Web应用认证流程
-- **桌面应用**：本地应用程序的安全认证
+* **Web应用**：集成到现有的Web应用认证流程
+* **桌面应用**：本地应用程序的安全认证
 
 ## 📝 TODO
 
-- [ ] 实现多平台支持
-- [x] client端使用pin+encryption_key加密存储信息
-- [x] 通信加密
-- [x] 异步回调
-- [ ] 完善认证流程细节
-- [x] 客户端认证接口同步返回结果
-- [ ] 完善管理页面
-- [x] 完善错误处理
-- [x] 完善日志
-- [ ] 完善文档
+* [ ] 实现多平台支持
+* [x] client端使用pin+encryption_key加密存储信息
+* [x] 通信加密
+* [x] 异步回调
+* [ ] 完善认证流程细节
+* [x] 客户端认证接口同步返回结果
+* [ ] 完善管理页面
+* [x] 完善错误处理
+* [x] 完善日志
+* [ ] 完善文档
 
 ## 🤝 贡献指南
 
@@ -133,8 +188,8 @@ cd build
 
 ## 📞 支持
 
-- **GitHub Issues**：[提交问题](https://github.com/hang666/EasyUKey/issues)
-- **文档**：[详细文档](https://github.com/hang666/EasyUKey/wiki)
+* **GitHub Issues**：[提交问题](https://github.com/hang666/EasyUKey/issues)
+* **文档**：[详细文档](https://github.com/hang666/EasyUKey/wiki)
 
 ---
 

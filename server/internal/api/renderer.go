@@ -1,9 +1,10 @@
 package api
 
 import (
+	"embed"
 	"html/template"
 	"io"
-	"path/filepath"
+	"io/fs"
 
 	"github.com/labstack/echo/v4"
 )
@@ -13,10 +14,14 @@ type TemplateRenderer struct {
 	templates *template.Template
 }
 
-// NewTemplateRenderer 创建模板渲染器
-func NewTemplateRenderer(templateDir string) *TemplateRenderer {
-	// 加载模板文件
-	templates := template.Must(template.ParseGlob(filepath.Join(templateDir, "*.html")))
+// NewEmbedTemplateRenderer 创建模板渲染器（从embed FS加载）
+func NewEmbedTemplateRenderer(embedFS embed.FS) *TemplateRenderer {
+	subFS, err := fs.Sub(embedFS, "template")
+	if err != nil {
+		panic("无法找到嵌入的template目录: " + err.Error())
+	}
+
+	templates := template.Must(template.ParseFS(subFS, "*.html"))
 
 	return &TemplateRenderer{
 		templates: templates,
