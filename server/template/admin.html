@@ -231,7 +231,10 @@
 														设备ID
 													</th>
 													<th class="pb-3 text-sm font-medium text-gray-600">
-														序列号
+														设备序列号
+													</th>
+													<th class="pb-3 text-sm font-medium text-gray-600">
+														卷序列号
 													</th>
 													<th class="pb-3 text-sm font-medium text-gray-600">
 														绑定用户
@@ -260,6 +263,10 @@
 														<td
 															class="py-3 text-sm text-gray-600"
 															x-text="device.serial_number || '未知'"
+														></td>
+														<td
+															class="py-3 text-sm text-gray-600"
+															x-text="device.volume_serial_number || '未知'"
 														></td>
 														<td class="py-3 text-sm text-gray-600">
 															<span
@@ -1449,10 +1456,12 @@
 						this.showDeviceModal = true;
 					},
 
-					openLinkModal(device) {
+					async openLinkModal(device) {
 						this.selectedDevice = device;
 						this.linkUserId = "";
 						this.showLinkModal = true;
+						// 刷新用户列表
+						await this.loadUsers();
 					},
 
 					resetUserForm() {
