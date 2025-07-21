@@ -1,8 +1,11 @@
 package router
 
 import (
+	"net/http"
+
 	"github.com/labstack/echo/v4"
 
+	"github.com/hang666/EasyUKey/sdk/response"
 	"github.com/hang666/EasyUKey/server/internal/api"
 	"github.com/hang666/EasyUKey/server/internal/middleware"
 	"github.com/hang666/EasyUKey/server/internal/ws"
@@ -12,9 +15,9 @@ import (
 func SetupRoutes(e *echo.Echo) {
 	// 健康检查
 	e.GET("/health", func(c echo.Context) error {
-		return c.JSON(200, map[string]string{
-			"status":  "ok",
-			"service": "EasyUKey Auth Server",
+		return c.JSON(http.StatusOK, &response.Response{
+			Success: true,
+			Message: "服务正常",
 		})
 	})
 
