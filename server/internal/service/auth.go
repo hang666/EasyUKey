@@ -192,7 +192,7 @@ func ProcessAuthResponse(sessionID string, authResp *messages.AuthResponseMessag
 }
 
 // StartAuth 发起用户认证
-func StartAuth(req *request.AuthRequest, apiKey *entity.APIKey) (*entity.AuthSession, error) {
+func StartAuth(req *request.AuthRequest, apiKey *entity.APIKey, clientIP string) (*entity.AuthSession, error) {
 	// 查找用户
 	var user entity.User
 	result := global.DB.Where("username = ? AND is_active = ?", req.Username, true).First(&user)
@@ -253,6 +253,7 @@ func StartAuth(req *request.AuthRequest, apiKey *entity.APIKey) (*entity.AuthSes
 		Status:      entity.AuthStatusPending,
 		ExpiresAt:   expiresAt,
 		CallbackURL: req.CallbackURL,
+		ClientIP:    clientIP,
 	}
 
 	if err := global.DB.Create(&session).Error; err != nil {

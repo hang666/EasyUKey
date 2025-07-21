@@ -29,7 +29,10 @@ func StartAuth(c echo.Context) error {
 	// 从上下文获取API密钥信息
 	apiKey := c.Get("api_key").(*entity.APIKey)
 
-	session, err := service.StartAuth(&req, apiKey)
+	// 获取客户端IP地址
+	clientIP := c.RealIP()
+
+	session, err := service.StartAuth(&req, apiKey, clientIP)
 	if err != nil {
 		return err
 	}

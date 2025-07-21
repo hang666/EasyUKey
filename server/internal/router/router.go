@@ -65,5 +65,8 @@ func SetupRoutes(e *echo.Echo) {
 		admin.POST("/apikeys", api.CreateAPIKey)
 		admin.GET("/apikeys", api.GetAPIKeys)
 		admin.DELETE("/apikeys/:id", api.DeleteAPIKey)
+
+		// 认证会话管理
+		admin.GET("/sessions", api.GetAuthSessions)
 	}
 }

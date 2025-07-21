@@ -17,6 +17,7 @@ type AuthSession struct {
 	Status             string         `gorm:"not null" json:"status"`     // "pending", "completed", "failed", "expired", "rejected"
 	Result             string         `json:"result"`                     // "success", "failure"
 	CallbackURL        string         `json:"callback_url"`               // 回调URL
+	ClientIP           string         `json:"client_ip"`                  // 客户端IP地址
 	CreatedAt          time.Time      `json:"created_at"`
 	ExpiresAt          time.Time      `json:"expires_at"`
 	UpdatedAt          time.Time      `json:"updated_at"`
