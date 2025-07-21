@@ -31,6 +31,21 @@ func UpdateDevice(c echo.Context) error {
 	return c.JSON(http.StatusOK, &response.Response{Success: true, Message: "设备更新成功", Data: device})
 }
 
+// DeleteDevice 删除设备
+func DeleteDevice(c echo.Context) error {
+	deviceID, err := parseUintParam(c, "id")
+	if err != nil {
+		return err
+	}
+
+	if err := service.DeleteDevice(deviceID); err != nil {
+		return err
+	}
+
+	result := map[string]string{"message": "设备删除成功"}
+	return c.JSON(http.StatusOK, &response.Response{Success: true, Message: "设备删除成功", Data: &result})
+}
+
 // LinkDeviceToUser 绑定设备到用户
 func LinkDeviceToUser(c echo.Context) error {
 	deviceID, err := parseUintParam(c, "id")

@@ -152,16 +152,50 @@ func DeleteUser(userID uint) error {
 		return fmt.Errorf("查询用户失败: %w", result.Error)
 	}
 
-	// 检查用户是否有绑定的设备
-	var deviceCount int64
-	global.DB.Model(&entity.Device{}).Where("user_id = ?", userID).Count(&deviceCount)
-	if deviceCount > 0 {
-		return fmt.Errorf("用户还有 %d 个绑定的设备，请先解绑设备", deviceCount)
+	// 使用事务确保数据一致性
+	tx := global.DB.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	if tx.Error != nil {
+		return fmt.Errorf("开始事务失败: %w", tx.Error)
+	}
+
+	// 获取用户绑定的设备列表
+	var devices []entity.Device
+	if err := tx.Where("user_id = ?", userID).Find(&devices).Error; err != nil {
+		tx.Rollback()
+		return fmt.Errorf("查询用户绑定设备失败: %w", err)
+	}
+
+	// 如果有绑定的设备，先解绑所有设备
+	if len(devices) > 0 {
+		// 断开所有设备的 WebSocket 连接
+		if hub := GetWSHub(); hub != nil {
+			for _, device := range devices {
+				hub.OnDeviceDisconnect(device.ID)
+			}
+		}
+
+		// 将设备的 user_id 设为 NULL（解绑设备）
+		if err := tx.Model(&entity.Device{}).Where("user_id = ?", userID).Update("user_id", nil).Error; err != nil {
+			tx.Rollback()
+			return fmt.Errorf("解绑用户设备失败: %w", err)
+		}
 	}
 
 	// 删除用户
-	if err := global.DB.Delete(&user).Error; err != nil {
+	if err := tx.Delete(&user).Error; err != nil {
+		tx.Rollback()
 		return fmt.Errorf("删除用户失败: %w", err)
+	}
+
+	// 提交事务
+	if err := tx.Commit().Error; err != nil {
+		return fmt.Errorf("提交事务失败: %w", err)
 	}
 
 	return nil

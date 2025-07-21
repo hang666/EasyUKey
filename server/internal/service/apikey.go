@@ -82,3 +82,50 @@ func GetAPIKey(apiKey string) (*entity.APIKey, error) {
 	}
 	return &key, nil
 }
+
+// DeleteAPIKey 删除API密钥
+func DeleteAPIKey(apiKeyID uint) error {
+	// 查找API密钥
+	var key entity.APIKey
+	result := global.DB.Where("id = ?", apiKeyID).First(&key)
+	if result.Error != nil {
+		if result.Error.Error() == "record not found" {
+			return fmt.Errorf("API密钥不存在")
+		}
+		return fmt.Errorf("查询API密钥失败: %w", result.Error)
+	}
+
+	// 防止删除管理员密钥时留下系统无管理员的情况
+	if key.IsAdmin {
+		var adminKeyCount int64
+		global.DB.Model(&entity.APIKey{}).Where("is_admin = ? AND is_active = ?", true, true).Count(&adminKeyCount)
+		if adminKeyCount <= 1 {
+			return fmt.Errorf("无法删除最后一个管理员密钥")
+		}
+	}
+
+	// 使用事务确保数据一致性
+	tx := global.DB.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	if tx.Error != nil {
+		return fmt.Errorf("开始事务失败: %w", tx.Error)
+	}
+
+	// 删除API密钥
+	if err := tx.Delete(&key).Error; err != nil {
+		tx.Rollback()
+		return fmt.Errorf("删除API密钥失败: %w", err)
+	}
+
+	// 提交事务
+	if err := tx.Commit().Error; err != nil {
+		return fmt.Errorf("提交事务失败: %w", err)
+	}
+
+	return nil
+}

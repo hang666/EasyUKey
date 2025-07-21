@@ -50,3 +50,18 @@ func GetAPIKeys(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, &response.Response{Success: true, Message: "获取API密钥列表成功", Data: &apiKeys, Total: &total})
 }
+
+// DeleteAPIKey 删除API密钥
+func DeleteAPIKey(c echo.Context) error {
+	apiKeyID, err := parseUintParam(c, "id")
+	if err != nil {
+		return err
+	}
+
+	if err := service.DeleteAPIKey(apiKeyID); err != nil {
+		return err
+	}
+
+	result := map[string]string{"message": "API密钥删除成功"}
+	return c.JSON(http.StatusOK, &response.Response{Success: true, Message: "API密钥删除成功", Data: &result})
+}

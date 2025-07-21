@@ -241,6 +241,49 @@ func UnlinkDeviceFromUser(deviceID uint) (*entity.Device, error) {
 	return &device, nil
 }
 
+// DeleteDevice 删除设备
+func DeleteDevice(deviceID uint) error {
+	// 查找设备
+	var device entity.Device
+	result := global.DB.Where("id = ?", deviceID).First(&device)
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return errs.ErrDeviceNotFound
+		}
+		return fmt.Errorf("查询设备失败: %w", result.Error)
+	}
+
+	// 使用事务确保数据一致性
+	tx := global.DB.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	if tx.Error != nil {
+		return fmt.Errorf("开始事务失败: %w", tx.Error)
+	}
+
+	// 强制断开设备的 WebSocket 连接
+	if hub := GetWSHub(); hub != nil {
+		hub.OnDeviceDisconnect(deviceID)
+	}
+
+	// 删除设备
+	if err := tx.Delete(&device).Error; err != nil {
+		tx.Rollback()
+		return fmt.Errorf("删除设备失败: %w", err)
+	}
+
+	// 提交事务
+	if err := tx.Commit().Error; err != nil {
+		return fmt.Errorf("提交事务失败: %w", err)
+	}
+
+	return nil
+}
+
 // OfflineDevice 设备下线
 func OfflineDevice(deviceID uint) (*entity.Device, error) {
 	// 查找设备

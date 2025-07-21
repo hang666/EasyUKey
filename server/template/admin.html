@@ -321,6 +321,13 @@
 															>
 																<i class="fas fa-power-off"></i>
 															</button>
+															<button
+																@click="deleteDevice(device)"
+																class="text-red-600 hover:text-red-800"
+																title="删除设备"
+															>
+																<i class="fas fa-trash"></i>
+															</button>
 														</td>
 													</tr>
 												</template>
@@ -572,13 +579,21 @@
 																x-text="key.is_active ? '正常' : '禁用'"
 															></span>
 														</td>
-														<td class="py-3">
+														<td class="py-3 space-x-2">
 															<button
 																@click="copyKey(key)"
 																class="text-blue-600 hover:text-blue-800"
 																:disabled="!key.api_key"
+																title="复制密钥"
 															>
 																<i class="fas fa-copy"></i>
+															</button>
+															<button
+																@click="deleteAPIKey(key)"
+																class="text-red-600 hover:text-red-800"
+																title="删除密钥"
+															>
+																<i class="fas fa-trash"></i>
 															</button>
 														</td>
 													</tr>
@@ -1261,7 +1276,12 @@
 					},
 
 					async deleteUser(user) {
-						if (!confirm(`确定要删除用户 ${user.username} 吗？`)) return;
+						if (
+							!confirm(
+								`确定要删除用户 ${user.username} 吗？这将自动解绑该用户的所有设备。`
+							)
+						)
+							return;
 						this.loading = true;
 
 						try {
@@ -1272,6 +1292,56 @@
 							if (result.success) {
 								await this.loadUsers();
 								this.showMsg("用户删除成功");
+							}
+						} catch (error) {
+							this.showMsg("删除失败: " + error.message, "error");
+						} finally {
+							this.loading = false;
+						}
+					},
+
+					async deleteDevice(device) {
+						if (
+							!confirm(
+								`确定要删除设备 ${
+									device.name || device.id
+								} 吗？这将删除所有相关数据。`
+							)
+						)
+							return;
+						this.loading = true;
+
+						try {
+							const result = await this.api(
+								`/api/v1/admin/devices/${device.id}`,
+								{
+									method: "DELETE",
+								}
+							);
+
+							if (result.success) {
+								await this.loadDevices();
+								this.showMsg("设备删除成功");
+							}
+						} catch (error) {
+							this.showMsg("删除失败: " + error.message, "error");
+						} finally {
+							this.loading = false;
+						}
+					},
+
+					async deleteAPIKey(key) {
+						if (!confirm(`确定要删除API密钥 ${key.name} 吗？`)) return;
+						this.loading = true;
+
+						try {
+							const result = await this.api(`/api/v1/admin/apikeys/${key.id}`, {
+								method: "DELETE",
+							});
+
+							if (result.success) {
+								await this.loadApiKeys();
+								this.showMsg("API密钥删除成功");
 							}
 						} catch (error) {
 							this.showMsg("删除失败: " + error.message, "error");

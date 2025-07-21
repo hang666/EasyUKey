@@ -56,6 +56,7 @@ func SetupRoutes(e *echo.Echo) {
 		admin.GET("/devices/statistics", api.GetDeviceStatistics)
 		admin.GET("/devices/:id", api.GetDevice)
 		admin.PUT("/devices/:id", api.UpdateDevice)
+		admin.DELETE("/devices/:id", api.DeleteDevice)
 		admin.POST("/devices/:id/user", api.LinkDeviceToUser)
 		admin.DELETE("/devices/:id/user", api.UnlinkDeviceFromUser)
 		admin.POST("/devices/:id/offline", api.OfflineDevice)
@@ -63,5 +64,6 @@ func SetupRoutes(e *echo.Echo) {
 		// API密钥管理
 		admin.POST("/apikeys", api.CreateAPIKey)
 		admin.GET("/apikeys", api.GetAPIKeys)
+		admin.DELETE("/apikeys/:id", api.DeleteAPIKey)
 	}
 }
