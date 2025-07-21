@@ -40,7 +40,8 @@ func InitDatabase(cfg *config.DatabaseConfig) error {
 	}
 
 	gormConfig := &gorm.Config{
-		Logger: gormLogger.Default.LogMode(gormLogLevel),
+		Logger:                                   gormLogger.Default.LogMode(gormLogLevel),
+		DisableForeignKeyConstraintWhenMigrating: true,
 	}
 
 	// 连接数据库
