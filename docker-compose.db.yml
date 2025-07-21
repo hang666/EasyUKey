@@ -17,7 +17,7 @@ services:
     restart: unless-stopped
 
   server:
-    image: hang666/easyukey-server:latest
+    image: ghcr.io/hang666/easyukey-server:latest
     container_name: easyukey-server
     command: ["/app/easyukey-server", "-config", "/app/config.yaml"]
     ports:

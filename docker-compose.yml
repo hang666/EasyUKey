@@ -1,7 +1,7 @@
 # docker-compose.yml - 使用外部MySQL数据库的默认版本（推荐）
 services:
   server:
-    image: hang666/easyukey-server:latest
+    image: ghcr.io/hang666/easyukey-server:latest
     container_name: easyukey-server
     command: ["/app/easyukey-server", "-config", "/app/config.yaml"]
     ports:
