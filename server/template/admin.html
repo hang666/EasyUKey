@@ -33,6 +33,39 @@
 					transform: translateY(0);
 				}
 			}
+
+			.select-all {
+				user-select: text;
+				-webkit-user-select: text;
+				-moz-user-select: text;
+				-ms-user-select: text;
+			}
+
+			.select-all:hover {
+				background-color: rgba(59, 130, 246, 0.1);
+				border-radius: 4px;
+				padding: 2px 4px;
+				margin: -2px -4px;
+			}
+
+			td .select-all {
+				display: inline-block;
+				word-break: break-all;
+			}
+
+			.max-w-xs {
+				max-width: 12rem;
+			}
+
+			.overflow-hidden {
+				overflow: hidden;
+			}
+
+			.text-ellipsis {
+				white-space: nowrap;
+				overflow: hidden;
+				text-overflow: ellipsis;
+			}
 		</style>
 	</head>
 
@@ -256,27 +289,50 @@
 											<tbody>
 												<template x-for="device in devices" :key="device.id">
 													<tr class="border-b border-gray-100 hover:bg-gray-50">
-														<td
-															class="py-3 text-sm text-gray-800"
-															x-text="device.id"
-														></td>
-														<td
-															class="py-3 text-sm text-gray-600"
-															x-text="device.serial_number || '未知'"
-														></td>
-														<td
-															class="py-3 text-sm text-gray-600"
-															x-text="device.volume_serial_number || '未知'"
-														></td>
-														<td class="py-3 text-sm text-gray-600">
-															<span
-																x-text="device.user ? device.user.username : '未绑定'"
-															></span>
+														<td class="py-3 text-sm text-gray-800">
+															<div class="max-w-xs overflow-hidden">
+																<span
+																	class="select-all cursor-text"
+																	:title="device.id"
+																	x-text="device.id"
+																></span>
+															</div>
 														</td>
 														<td class="py-3 text-sm text-gray-600">
-															<span
-																x-text="device.permissions ? device.permissions.join(', ') : '无'"
-															></span>
+															<div class="max-w-xs overflow-hidden">
+																<span
+																	class="select-all cursor-text text-ellipsis"
+																	:title="device.serial_number || '未知'"
+																	x-text="device.serial_number || '未知'"
+																></span>
+															</div>
+														</td>
+														<td class="py-3 text-sm text-gray-600">
+															<div class="max-w-xs overflow-hidden">
+																<span
+																	class="select-all cursor-text text-ellipsis"
+																	:title="device.volume_serial_number || '未知'"
+																	x-text="device.volume_serial_number || '未知'"
+																></span>
+															</div>
+														</td>
+														<td class="py-3 text-sm text-gray-600">
+															<div class="max-w-xs overflow-hidden">
+																<span
+																	class="select-all cursor-text text-ellipsis"
+																	:title="device.user ? device.user.username : '未绑定'"
+																	x-text="device.user ? device.user.username : '未绑定'"
+																></span>
+															</div>
+														</td>
+														<td class="py-3 text-sm text-gray-600">
+															<div class="max-w-xs overflow-hidden">
+																<span
+																	class="select-all cursor-text text-ellipsis"
+																	:title="device.permissions ? device.permissions.join(', ') : '无'"
+																	x-text="device.permissions ? device.permissions.join(', ') : '无'"
+																></span>
+															</div>
 														</td>
 														<td class="py-3">
 															<span
@@ -421,18 +477,32 @@
 											<tbody>
 												<template x-for="user in users" :key="user.id">
 													<tr class="border-b border-gray-100 hover:bg-gray-50">
-														<td
-															class="py-3 text-sm text-gray-800"
-															x-text="user.id"
-														></td>
-														<td
-															class="py-3 text-sm text-gray-600"
-															x-text="user.username"
-														></td>
+														<td class="py-3 text-sm text-gray-800">
+															<div class="max-w-xs overflow-hidden">
+																<span
+																	class="select-all cursor-text"
+																	:title="user.id"
+																	x-text="user.id"
+																></span>
+															</div>
+														</td>
 														<td class="py-3 text-sm text-gray-600">
-															<span
-																x-text="user.permissions ? user.permissions.join(', ') : '无'"
-															></span>
+															<div class="max-w-xs overflow-hidden">
+																<span
+																	class="select-all cursor-text text-ellipsis"
+																	:title="user.username"
+																	x-text="user.username"
+																></span>
+															</div>
+														</td>
+														<td class="py-3 text-sm text-gray-600">
+															<div class="max-w-xs overflow-hidden">
+																<span
+																	class="select-all cursor-text text-ellipsis"
+																	:title="user.permissions ? user.permissions.join(', ') : '无'"
+																	x-text="user.permissions ? user.permissions.join(', ') : '无'"
+																></span>
+															</div>
 														</td>
 														<td class="py-3">
 															<span
@@ -553,14 +623,24 @@
 											<tbody>
 												<template x-for="key in apikeys" :key="key.id">
 													<tr class="border-b border-gray-100 hover:bg-gray-50">
-														<td
-															class="py-3 text-sm text-gray-800"
-															x-text="key.name"
-														></td>
-														<td
-															class="py-3 text-sm text-gray-600 font-mono"
-															x-text="key.api_key ? key.api_key.substring(0, 20) + '...' : '***'"
-														></td>
+														<td class="py-3 text-sm text-gray-800">
+															<div class="max-w-xs overflow-hidden">
+																<span
+																	class="select-all cursor-text text-ellipsis"
+																	:title="key.name"
+																	x-text="key.name"
+																></span>
+															</div>
+														</td>
+														<td class="py-3 text-sm text-gray-600 font-mono">
+															<div class="max-w-xs overflow-hidden">
+																<span
+																	class="select-all cursor-text text-ellipsis"
+																	:title="key.api_key || '***'"
+																	x-text="key.api_key || '***'"
+																></span>
+															</div>
+														</td>
 														<td class="py-3">
 															<span
 																class="px-2 py-1 text-xs rounded-full"
@@ -685,20 +765,32 @@
 											<tbody>
 												<template x-for="session in sessions" :key="session.id">
 													<tr class="border-b border-gray-100 hover:bg-gray-50">
-														<td
-															class="py-3 text-sm text-gray-800 font-mono"
-															x-text="session.id.substring(0, 8) + '...'"
-															:title="session.id"
-														></td>
-														<td class="py-3 text-sm text-gray-600">
-															<span
-																x-text="session.user ? session.user.username : 'N/A'"
-															></span>
+														<td class="py-3 text-sm text-gray-800 font-mono">
+															<div class="max-w-xs overflow-hidden">
+																<span
+																	class="select-all cursor-text text-ellipsis"
+																	:title="session.id"
+																	x-text="session.id"
+																></span>
+															</div>
 														</td>
 														<td class="py-3 text-sm text-gray-600">
-															<span
-																x-text="session.action || '登录认证'"
-															></span>
+															<div class="max-w-xs overflow-hidden">
+																<span
+																	class="select-all cursor-text text-ellipsis"
+																	:title="session.user ? session.user.username : 'N/A'"
+																	x-text="session.user ? session.user.username : 'N/A'"
+																></span>
+															</div>
+														</td>
+														<td class="py-3 text-sm text-gray-600">
+															<div class="max-w-xs overflow-hidden">
+																<span
+																	class="select-all cursor-text text-ellipsis"
+																	:title="session.action || '登录认证'"
+																	x-text="session.action || '登录认证'"
+																></span>
+															</div>
 														</td>
 														<td class="py-3">
 															<span
@@ -722,12 +814,22 @@
 															></span>
 														</td>
 														<td class="py-3 text-sm text-gray-600 font-mono">
-															<span x-text="session.client_ip || 'N/A'"></span>
+															<div class="max-w-xs overflow-hidden">
+																<span
+																	class="select-all cursor-text text-ellipsis"
+																	:title="session.client_ip || 'N/A'"
+																	x-text="session.client_ip || 'N/A'"
+																></span>
+															</div>
 														</td>
 														<td class="py-3 text-sm text-gray-600">
-															<span
-																x-text="session.responding_device ? session.responding_device.name : 'N/A'"
-															></span>
+															<div class="max-w-xs overflow-hidden">
+																<span
+																	class="select-all cursor-text text-ellipsis"
+																	:title="session.responding_device ? session.responding_device.name : 'N/A'"
+																	x-text="session.responding_device ? session.responding_device.name : 'N/A'"
+																></span>
+															</div>
 														</td>
 														<td
 															class="py-3 text-sm text-gray-600"
@@ -1658,7 +1760,36 @@
 					},
 
 					showMsg(message, type = "success") {
-						alert(message); // 可替换为更好的提示组件
+						// 创建提示元素
+						const toast = document.createElement("div");
+						toast.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 transition-all duration-300 transform translate-x-full`;
+
+						// 根据类型设置样式
+						if (type === "success") {
+							toast.className += " bg-green-500 text-white";
+						} else if (type === "error") {
+							toast.className += " bg-red-500 text-white";
+						} else {
+							toast.className += " bg-blue-500 text-white";
+						}
+
+						toast.textContent = message;
+						document.body.appendChild(toast);
+
+						// 显示动画
+						setTimeout(() => {
+							toast.classList.remove("translate-x-full");
+						}, 100);
+
+						// 自动隐藏
+						setTimeout(() => {
+							toast.classList.add("translate-x-full");
+							setTimeout(() => {
+								if (document.body.contains(toast)) {
+									document.body.removeChild(toast);
+								}
+							}, 300);
+						}, 3000);
 					},
 
 					openNewUserModal() {
