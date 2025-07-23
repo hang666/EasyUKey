@@ -1,0 +1,90 @@
+name: 功能需求
+description: 提交一个新功能或改进建议
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢您提交功能需求！请详细填写以下信息，帮助我们了解您的需求并评估实现可行性。
+
+  - type: textarea
+    id: feature-description
+    attributes:
+      label: 需求描述
+      description: 请简要描述您希望添加的功能或改进点
+      placeholder: 描述您想要的功能...
+    validations:
+      required: true
+
+  - type: textarea
+    id: use-case-motivation
+    attributes:
+      label: 场景与动机
+      description: 请说明该功能的应用场景，以及为什么需要此功能
+      placeholder: |
+        使用场景：
+        - 当我...时
+        - 我希望能够...
+        - 这样可以帮助...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: 优先级
+      description: 您认为这个功能的重要程度如何？
+      options:
+        - 低 - 可有可无的改进
+        - 中 - 能提升体验的有用功能
+        - 高 - 重要功能，影响使用
+        - 紧急 - 关键功能，必须实现
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed-implementation
+    attributes:
+      label: 期望的实现方式
+      description: 如果有建议的实现方式或界面，请在此描述
+      placeholder: |
+        建议的实现方式：
+        - UI界面设计想法
+        - 功能流程设计
+        - 技术实现建议
+    validations:
+      required: false
+
+  - type: textarea
+    id: references
+    attributes:
+      label: 相关资料或参考
+      description: 如有相关参考资料或竞品实现，请附在此处
+      placeholder: |
+        参考链接：
+        - 相关文档链接
+        - 竞品功能截图
+        - 类似实现案例
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: user-type
+    attributes:
+      label: 用户类型
+      description: 您属于哪种用户类型？（可多选）
+      options:
+        - label: 普通用户
+        - label: 系统管理员
+        - label: 开发者
+        - label: 其他
+
+  - type: textarea
+    id: additional-info
+    attributes:
+      label: 其他补充信息
+      description: 如有其他补充说明，请在此提供
+      placeholder: 其他相关信息...
+    validations:
+      required: false
