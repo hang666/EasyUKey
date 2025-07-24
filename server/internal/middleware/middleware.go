@@ -52,9 +52,16 @@ var httpStatusMap = map[error]int{
 
 // getHTTPStatus 获取错误对应的HTTP状态码
 func getHTTPStatus(err error) int {
+	// 首先检查自定义错误映射
 	if status, ok := httpStatusMap[err]; ok {
 		return status
 	}
+
+	// 检查Echo框架的HTTP错误
+	if httpErr, ok := err.(*echo.HTTPError); ok {
+		return httpErr.Code
+	}
+
 	return 500 // 默认内部服务器错误
 }
 
@@ -118,6 +125,15 @@ func SetupMiddleware(e *echo.Echo) {
 	}))
 }
 
+// shouldLogError 判断是否应该记录错误日志
+func shouldLogError(status int, uri string) bool {
+	// 忽略其他4xx客户端错误（400-499范围）
+	if status >= 400 && status < 500 {
+		return false
+	}
+	return true
+}
+
 // LoggerMiddleware 自定义日志中间件
 func LoggerMiddleware() echo.MiddlewareFunc {
 	return middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
@@ -130,7 +146,7 @@ func LoggerMiddleware() echo.MiddlewareFunc {
 		LogUserAgent: true,
 		LogRequestID: true,
 		LogValuesFunc: func(c echo.Context, v middleware.RequestLoggerValues) error {
-			if v.Error != nil {
+			if v.Error != nil && shouldLogError(v.Status, v.URI) {
 				logger.Logger.Error("HTTP请求错误", "error", v.Error, "method", v.Method, "uri", v.URI, "status", v.Status)
 			}
 			return nil
@@ -143,8 +159,10 @@ func ErrorHandler(err error, c echo.Context) {
 	code := getHTTPStatus(err)
 	message := err.Error()
 
-	// 记录错误日志
-	logger.Logger.Error("HTTP错误处理", "error", err, "method", c.Request().Method, "uri", c.Request().RequestURI, "status", code)
+	// 只记录真正需要关注的错误日志（避免与LoggerMiddleware重复记录）
+	if shouldLogError(code, c.Request().RequestURI) {
+		logger.Logger.Error("HTTP错误处理", "error", err, "method", c.Request().Method, "uri", c.Request().RequestURI, "status", code)
+	}
 
 	if !c.Response().Committed {
 		if c.Request().Method == echo.HEAD {
