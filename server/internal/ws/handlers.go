@@ -48,6 +48,18 @@ func handleExistingDeviceConnection(client *Client, connMsg *messages.DeviceConn
 	if deviceGroupID != nil {
 		var deviceGroup entity.DeviceGroup
 		if err := global.DB.Where("id = ?", *deviceGroupID).First(&deviceGroup).Error; err == nil {
+			// 如果提供了认证信息但OnceKey不匹配，记录警告
+			if connMsg.OnceKey != "" && deviceGroup.OnceKey != connMsg.OnceKey {
+				logger.Logger.Warn("检测到可疑设备：现有设备连接时OnceKey不匹配",
+					"device_id", deviceID,
+					"device_group_id", deviceGroup.ID,
+					"device_group_name", deviceGroup.Name,
+					"provided_once_key", connMsg.OnceKey,
+					"expected_once_key", deviceGroup.OnceKey,
+					"serial_number", connMsg.SerialNumber,
+				)
+			}
+
 			if deviceGroup.UserID != nil {
 				client.mu.Lock()
 				client.UserID = *deviceGroup.UserID
