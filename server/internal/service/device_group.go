@@ -8,11 +8,103 @@ import (
 
 	"gorm.io/gorm"
 
+	"github.com/hang666/EasyUKey/sdk/response"
 	"github.com/hang666/EasyUKey/server/internal/global"
 	"github.com/hang666/EasyUKey/server/internal/model/entity"
 	"github.com/hang666/EasyUKey/shared/pkg/errs"
 	"github.com/hang666/EasyUKey/shared/pkg/identity"
 )
+
+// ConvertToDeviceGroupResponse 将设备组实体转换为安全的响应结构
+func ConvertToDeviceGroupResponse(group *entity.DeviceGroup) *response.DeviceGroupResponse {
+	if group == nil {
+		return nil
+	}
+
+	resp := &response.DeviceGroupResponse{
+		ID:          group.ID,
+		UserID:      group.UserID,
+		Name:        group.Name,
+		Description: group.Description,
+		Permissions: group.Permissions,
+		IsActive:    group.IsActive,
+		CreatedAt:   group.CreatedAt,
+		UpdatedAt:   group.UpdatedAt,
+	}
+
+	// 转换关联的用户信息
+	if group.User != nil {
+		resp.User = ConvertToUserResponse(group.User)
+	}
+
+	// 转换关联的设备信息
+	if group.Devices != nil {
+		resp.Devices = make([]response.DeviceResponse, 0, len(group.Devices))
+		for _, device := range group.Devices {
+			deviceResp := ConvertToDeviceResponse(&device)
+			if deviceResp != nil {
+				resp.Devices = append(resp.Devices, *deviceResp)
+			}
+		}
+	}
+
+	return resp
+}
+
+// ConvertToDeviceResponse 将设备实体转换为安全的响应结构
+func ConvertToDeviceResponse(device *entity.Device) *response.DeviceResponse {
+	if device == nil {
+		return nil
+	}
+
+	resp := &response.DeviceResponse{
+		ID:                 device.ID,
+		DeviceGroupID:      device.DeviceGroupID,
+		Name:               device.Name,
+		SerialNumber:       device.SerialNumber,
+		VolumeSerialNumber: device.VolumeSerialNumber,
+		Remark:             device.Remark,
+		IsActive:           device.IsActive,
+		IsOnline:           device.IsOnline,
+		LastHeartbeat:      device.LastHeartbeat,
+		LastOnlineAt:       device.LastOnlineAt,
+		LastOfflineAt:      device.LastOfflineAt,
+		HeartbeatInterval:  device.HeartbeatInterval,
+		CreatedAt:          device.CreatedAt,
+		UpdatedAt:          device.UpdatedAt,
+	}
+
+	// 转换关联的设备组信息
+	if device.DeviceGroup != nil {
+		resp.DeviceGroup = &response.DeviceGroupResponse{
+			ID:          device.DeviceGroup.ID,
+			UserID:      device.DeviceGroup.UserID,
+			Name:        device.DeviceGroup.Name,
+			Description: device.DeviceGroup.Description,
+			Permissions: device.DeviceGroup.Permissions,
+			IsActive:    device.DeviceGroup.IsActive,
+			CreatedAt:   device.DeviceGroup.CreatedAt,
+			UpdatedAt:   device.DeviceGroup.UpdatedAt,
+		}
+	}
+
+	return resp
+}
+
+// ConvertToUserResponse 将用户实体转换为安全的响应结构
+func ConvertToUserResponse(user *entity.User) *response.UserResponse {
+	if user == nil {
+		return nil
+	}
+
+	return &response.UserResponse{
+		ID:        user.ID,
+		Username:  user.Username,
+		IsActive:  user.IsActive,
+		CreatedAt: user.CreatedAt,
+		UpdatedAt: user.UpdatedAt,
+	}
+}
 
 // GetDeviceGroup 获取设备组详情
 func GetDeviceGroup(groupID uint) (*entity.DeviceGroup, error) {

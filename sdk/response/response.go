@@ -33,3 +33,45 @@ type DeviceStatistics struct {
 	ActiveDevices  int64 `json:"active_devices"`
 	BoundDevices   int64 `json:"bound_devices"`
 }
+
+// DeviceGroupResponse 设备组响应结构（排除敏感字段）
+type DeviceGroupResponse struct {
+	ID          uint             `json:"id"`
+	UserID      *uint            `json:"user_id"`
+	Name        string           `json:"name"`
+	Description string           `json:"description"`
+	Permissions []string         `json:"permissions"`
+	IsActive    bool             `json:"is_active"`
+	CreatedAt   time.Time        `json:"created_at"`
+	UpdatedAt   time.Time        `json:"updated_at"`
+	User        *UserResponse    `json:"user,omitempty"`
+	Devices     []DeviceResponse `json:"devices,omitempty"`
+}
+
+// DeviceResponse 设备响应结构（排除敏感字段）
+type DeviceResponse struct {
+	ID                 uint                 `json:"id"`
+	DeviceGroupID      *uint                `json:"device_group_id"`
+	Name               string               `json:"name"`
+	SerialNumber       string               `json:"serial_number"`
+	VolumeSerialNumber string               `json:"volume_serial_number"`
+	Remark             string               `json:"remark"`
+	IsActive           bool                 `json:"is_active"`
+	IsOnline           bool                 `json:"is_online"`
+	LastHeartbeat      *time.Time           `json:"last_heartbeat"`
+	LastOnlineAt       *time.Time           `json:"last_online_at"`
+	LastOfflineAt      *time.Time           `json:"last_offline_at"`
+	HeartbeatInterval  int                  `json:"heartbeat_interval"`
+	CreatedAt          time.Time            `json:"created_at"`
+	UpdatedAt          time.Time            `json:"updated_at"`
+	DeviceGroup        *DeviceGroupResponse `json:"device_group,omitempty"`
+}
+
+// UserResponse 用户响应结构（排除敏感字段）
+type UserResponse struct {
+	ID        uint      `json:"id"`
+	Username  string    `json:"username"`
+	IsActive  bool      `json:"is_active"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}

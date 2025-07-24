@@ -28,7 +28,10 @@ func UpdateDevice(c echo.Context) error {
 		return err
 	}
 
-	return c.JSON(http.StatusOK, &response.Response{Success: true, Message: "设备更新成功", Data: device})
+	// 转换为安全的响应结构
+	safeResponse := service.ConvertToDeviceResponse(device)
+
+	return c.JSON(http.StatusOK, &response.Response{Success: true, Message: "设备更新成功", Data: safeResponse})
 }
 
 // DeleteDevice 删除设备
@@ -58,7 +61,10 @@ func OfflineDevice(c echo.Context) error {
 		return err
 	}
 
-	return c.JSON(http.StatusOK, &response.Response{Success: true, Message: "设备已下线", Data: device})
+	// 转换为安全的响应结构
+	safeResponse := service.ConvertToDeviceResponse(device)
+
+	return c.JSON(http.StatusOK, &response.Response{Success: true, Message: "设备已下线", Data: safeResponse})
 }
 
 // GetDevices 获取设备列表
@@ -112,7 +118,15 @@ func GetDevices(c echo.Context) error {
 		return err
 	}
 
-	return c.JSON(http.StatusOK, &response.Response{Success: true, Message: "获取设备列表成功", Data: &devices, Total: &total})
+	// 转换为安全的响应结构
+	safeDevices := make([]response.DeviceResponse, 0, len(devices))
+	for _, device := range devices {
+		if safeDevice := service.ConvertToDeviceResponse(&device); safeDevice != nil {
+			safeDevices = append(safeDevices, *safeDevice)
+		}
+	}
+
+	return c.JSON(http.StatusOK, &response.Response{Success: true, Message: "获取设备列表成功", Data: &safeDevices, Total: &total})
 }
 
 // GetDevice 获取设备详情
@@ -127,7 +141,10 @@ func GetDevice(c echo.Context) error {
 		return err
 	}
 
-	return c.JSON(http.StatusOK, &response.Response{Success: true, Message: "获取设备详情成功", Data: device})
+	// 转换为安全的响应结构
+	safeResponse := service.ConvertToDeviceResponse(device)
+
+	return c.JSON(http.StatusOK, &response.Response{Success: true, Message: "获取设备详情成功", Data: safeResponse})
 }
 
 // GetDeviceStatistics 获取设备统计信息

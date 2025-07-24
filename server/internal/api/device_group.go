@@ -22,9 +22,12 @@ func GetDeviceGroup(c echo.Context) error {
 		return err
 	}
 
+	// 转换为安全的响应结构
+	safeResponse := service.ConvertToDeviceGroupResponse(deviceGroup)
+
 	return c.JSON(http.StatusOK, &response.Response{
 		Success: true,
-		Data:    deviceGroup,
+		Data:    safeResponse,
 	})
 }
 
@@ -35,9 +38,17 @@ func GetDeviceGroups(c echo.Context) error {
 		return err
 	}
 
+	// 转换为安全的响应结构
+	safeGroups := make([]response.DeviceGroupResponse, 0, len(deviceGroups))
+	for _, group := range deviceGroups {
+		if safeGroup := service.ConvertToDeviceGroupResponse(&group); safeGroup != nil {
+			safeGroups = append(safeGroups, *safeGroup)
+		}
+	}
+
 	return c.JSON(http.StatusOK, &response.Response{
 		Success: true,
-		Data:    deviceGroups,
+		Data:    safeGroups,
 	})
 }
 
@@ -58,10 +69,13 @@ func UpdateDeviceGroup(c echo.Context) error {
 		return err
 	}
 
+	// 转换为安全的响应结构
+	safeResponse := service.ConvertToDeviceGroupResponse(deviceGroup)
+
 	return c.JSON(http.StatusOK, &response.Response{
 		Success: true,
 		Message: "设备组更新成功",
-		Data:    deviceGroup,
+		Data:    safeResponse,
 	})
 }
 
@@ -99,8 +113,16 @@ func GetPendingActivationDevices(c echo.Context) error {
 		return err
 	}
 
+	// 转换为安全的响应结构
+	safeDevices := make([]response.DeviceResponse, 0, len(devices))
+	for _, device := range devices {
+		if safeDevice := service.ConvertToDeviceResponse(&device); safeDevice != nil {
+			safeDevices = append(safeDevices, *safeDevice)
+		}
+	}
+
 	return c.JSON(http.StatusOK, &response.Response{
 		Success: true,
-		Data:    devices,
+		Data:    safeDevices,
 	})
 }
