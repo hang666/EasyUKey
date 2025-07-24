@@ -22,9 +22,10 @@ const (
 )
 
 var (
-	conn        *websocket.Conn
-	mu          sync.Mutex
-	isConnected bool
+	conn              *websocket.Conn
+	mu                sync.Mutex
+	isConnected       bool
+	isFirstConnection bool = true // 标记是否为首次连接
 
 	serverAddr          string
 	isDeviceInitialized bool
@@ -83,11 +84,16 @@ func Connect() error {
 		return errs.ErrKeyExchangeTimeout
 	}
 
-	// 根据设备初始化状态发送对应请求
+	// 根据设备初始化状态和连接状态发送对应请求
 	if !isDeviceInitialized {
 		err = SendDeviceInitRequest()
-	} else {
+	} else if isFirstConnection {
+		// 首次连接发送正常连接消息
 		err = SendDeviceConnection()
+		isFirstConnection = false
+	} else {
+		// 重连时发送重连消息
+		err = SendDeviceReconnect()
 	}
 	if err != nil {
 		logger.Logger.Error("发送设备请求失败", "error", err)

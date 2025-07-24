@@ -93,6 +93,17 @@ type DeviceStatusMessage struct {
 	VolumeSerialNumber string `json:"volume_serial_number"`
 }
 
+// DeviceReconnectMessage 设备重连消息（客户端主动发送）
+type DeviceReconnectMessage struct {
+	SerialNumber       string `json:"serial_number"`
+	VolumeSerialNumber string `json:"volume_serial_number"`
+	TOTPCode           string `json:"totp_code,omitempty"` // 如果有认证信息
+	OnceKey            string `json:"once_key,omitempty"`  // 如果有认证信息
+	DevicePath         string `json:"device_path"`
+	Vendor             string `json:"vendor"`
+	Model              string `json:"model"`
+}
+
 // PingMessage 心跳请求消息
 type PingMessage struct {
 	Timestamp time.Time `json:"timestamp"`

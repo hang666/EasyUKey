@@ -119,6 +119,24 @@ func SendDeviceConnection() error {
 	return sendWSMessage("device_connection", connection)
 }
 
+// SendDeviceReconnect 发送设备重连消息
+func SendDeviceReconnect() error {
+	dev := device.DeviceInfo.GetDevice()
+	if dev == nil {
+		return errs.ErrDeviceNotAvailable
+	}
+
+	reconnect := messages.DeviceReconnectMessage{
+		SerialNumber:       dev.SerialNumber,
+		VolumeSerialNumber: dev.VolumeSerialNumber,
+		DevicePath:         dev.DevicePath,
+		Vendor:             dev.Vendor,
+		Model:              dev.Model,
+	}
+
+	return sendWSMessage("device_reconnect", reconnect)
+}
+
 // SendDeviceInitRequest 发送设备初始化请求
 func SendDeviceInitRequest() error {
 	dev := device.DeviceInfo.GetDevice()

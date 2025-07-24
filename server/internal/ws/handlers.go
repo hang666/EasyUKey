@@ -144,6 +144,48 @@ func handleCrossPlatformDeviceConnection(client *Client, connMsg *messages.Devic
 	return sendMessageToClient(client, "device_connection_response", connResp)
 }
 
+// handleDeviceReconnect 处理设备重连
+func handleDeviceReconnect(client *Client, wsMsg *messages.WSMessage) error {
+	// 解析重连消息
+	reconnectMsg, err := wsutil.ParseMessage[messages.DeviceReconnectMessage](wsMsg)
+	if err != nil {
+		logger.Logger.Error("解析设备重连消息失败", "error", err)
+		return err
+	}
+
+	// 转换为标准连接消息格式
+	connMsg := messages.DeviceConnectionMessage{
+		SerialNumber:       reconnectMsg.SerialNumber,
+		VolumeSerialNumber: reconnectMsg.VolumeSerialNumber,
+		TOTPCode:           reconnectMsg.TOTPCode,
+		OnceKey:            reconnectMsg.OnceKey,
+		DevicePath:         reconnectMsg.DevicePath,
+		Vendor:             reconnectMsg.Vendor,
+		Model:              reconnectMsg.Model,
+	}
+
+	// 查找现有设备
+	var device struct {
+		ID            uint
+		DeviceGroupID *uint
+		IsActive      bool
+	}
+	result := global.DB.Table("devices").
+		Select("id, device_group_id, is_active").
+		Where("serial_number = ? AND volume_serial_number = ?", connMsg.SerialNumber, connMsg.VolumeSerialNumber).
+		First(&device)
+
+	if result.Error != nil {
+		// 没有找到设备，记录日志
+		logger.Logger.Warn("设备重连失败：未找到对应设备",
+			"serial_number", connMsg.SerialNumber,
+			"volume_serial_number", connMsg.VolumeSerialNumber)
+		return nil
+	}
+
+	return handleExistingDeviceConnection(client, &connMsg, device.ID, device.DeviceGroupID)
+}
+
 // createCrossPlatformDevice 创建跨平台设备记录
 func createCrossPlatformDevice(connMsg *messages.DeviceConnectionMessage, group *entity.DeviceGroup) (uint, error) {
 	// 创建新的设备记录，关联到现有设备组
