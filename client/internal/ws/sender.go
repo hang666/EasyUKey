@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/hang666/EasyUKey/client/internal/device"
+	"github.com/hang666/EasyUKey/client/internal/global"
 	"github.com/hang666/EasyUKey/shared/pkg/errs"
 	"github.com/hang666/EasyUKey/shared/pkg/identity"
 	"github.com/hang666/EasyUKey/shared/pkg/logger"
@@ -64,22 +65,58 @@ func sendEncryptedMessage(msgType string, data interface{}) error {
 	return wsutil.SendMessage(conn, "encrypted", encryptedMsg)
 }
 
-// SendDeviceRegistration 发送设备注册消息
-func SendDeviceRegistration() error {
+// SendDeviceConnection 发送设备连接消息
+func SendDeviceConnection() error {
 	dev := device.DeviceInfo.GetDevice()
 	if dev == nil {
 		return errs.ErrDeviceNotAvailable
 	}
 
-	registration := messages.DeviceRegistrationMessage{
+	// 通过PIN管理器获取PIN
+	pin, err := global.PinManager.WaitPIN()
+	if err != nil {
+		logger.Logger.Error("PIN获取失败", "error", err)
+		return err
+	}
+
+	// 使用PIN从安全存储获取TOTP URI
+	totpURI, err := identity.GetTOTPSecret(pin, global.Config.EncryptKeyStr, global.SecureStoragePath)
+	if err != nil {
+		logger.Logger.Error("获取TOTP密钥失败", "error", err)
+		return err
+	}
+
+	// 解析TOTP URI并生成当前TOTP码
+	totpConfig, err := identity.ParseTOTPURI(totpURI)
+	if err != nil {
+		logger.Logger.Error("解析TOTP URI失败", "error", err)
+		return err
+	}
+
+	totpCode, err := identity.GenerateTOTPCode(totpConfig, time.Now())
+	if err != nil {
+		logger.Logger.Error("生成TOTP码失败", "error", err)
+		return err
+	}
+
+	// 使用PIN从安全存储获取OnceKey
+	onceKey, err := identity.GetOnceKey(pin, global.Config.EncryptKeyStr, global.SecureStoragePath)
+	if err != nil {
+		logger.Logger.Error("获取OnceKey失败", "error", err)
+		return err
+	}
+
+	connection := messages.DeviceConnectionMessage{
 		SerialNumber:       dev.SerialNumber,
 		VolumeSerialNumber: dev.VolumeSerialNumber,
+		TOTPCode:           totpCode,
+		OnceKey:            onceKey,
 		DevicePath:         dev.DevicePath,
 		Vendor:             dev.Vendor,
 		Model:              dev.Model,
 	}
 
-	return sendWSMessage("device_register", registration)
+	return sendWSMessage("device_connection", connection)
 }
 
 // SendDeviceInitRequest 发送设备初始化请求

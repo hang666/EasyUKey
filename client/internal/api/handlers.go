@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -211,7 +212,14 @@ func renderErrorPage(c echo.Context, statusCode int, title, message string) erro
 
 // HandlePINPage 处理PIN设置页面
 func HandlePINPage(c echo.Context) error {
-	return c.Render(http.StatusOK, "pin.html", nil)
+	// 检查设备是否已初始化
+	isInitialized := identity.IsInitialized(global.SecureStoragePath)
+
+	data := map[string]interface{}{
+		"IsInitialized": isInitialized,
+	}
+
+	return c.Render(http.StatusOK, "pin.html", data)
 }
 
 // HandlePINSetup 处理PIN设置请求
@@ -232,15 +240,35 @@ func HandlePINSetup(c echo.Context) error {
 		})
 	}
 
-	// 检查是否已经初始化
-	if identity.IsInitialized(global.SecureStoragePath) {
-		return c.JSON(http.StatusBadRequest, PINSetupResponse{
-			Message: "设备已经初始化",
-			Status:  ConfirmActionStatusError,
+	// 检查设备是否已初始化
+	isInitialized := identity.IsInitialized(global.SecureStoragePath)
+
+	if isInitialized {
+		// 设备已初始化，验证PIN是否正确
+		_, err := identity.GetTOTPSecret(payload.PIN, global.Config.EncryptKeyStr, global.SecureStoragePath)
+		if err != nil {
+			go func() {
+				time.Sleep(3 * time.Second)
+				os.Exit(1)
+			}()
+			return c.JSON(http.StatusBadRequest, PINSetupResponse{
+				Message: "PIN验证失败，请检查PIN是否正确",
+				Status:  ConfirmActionStatusError,
+			})
+		}
+
+		// PIN验证成功，发送到PIN管理器
+		if global.PinManager != nil {
+			global.PinManager.SendPIN(payload.PIN)
+		}
+
+		return c.JSON(http.StatusOK, PINSetupResponse{
+			Message: "PIN验证成功，正在连接服务器...",
+			Status:  ConfirmActionStatusSuccess,
 		})
 	}
 
-	// 将PIN发送到PIN管理器，供初始化流程使用
+	// 设备未初始化，设置PIN用于初始化
 	if global.PinManager != nil {
 		global.PinManager.SendPIN(payload.PIN)
 	}

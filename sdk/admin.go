@@ -151,12 +151,6 @@ func (c *AdminClient) GetDevices(page, pageSize int, filter *request.DeviceFilte
 		if filter.IsActive != nil {
 			params.Set("is_active", strconv.FormatBool(*filter.IsActive))
 		}
-		if filter.UserID != nil {
-			params.Set("user_id", strconv.FormatUint(uint64(*filter.UserID), 10))
-		}
-		if filter.Username != "" {
-			params.Set("username", filter.Username)
-		}
 		if filter.Name != "" {
 			params.Set("name", filter.Name)
 		}
@@ -219,38 +213,6 @@ func (c *AdminClient) UpdateDevice(deviceID uint, req *request.UpdateDeviceReque
 	return &device, nil
 }
 
-// LinkDeviceToUser 绑定设备到用户
-func (c *AdminClient) LinkDeviceToUser(deviceID uint, req *request.LinkDeviceToUserRequest) (*Device, error) {
-	path := fmt.Sprintf("/api/v1/admin/devices/%d/user", deviceID)
-	resp, err := c.request("POST", path, req)
-	if err != nil {
-		return nil, err
-	}
-
-	var device Device
-	if err := mapToStruct(resp.Data, &device); err != nil {
-		return nil, fmt.Errorf("%w: %v", errs.ErrDataParseFailed, err)
-	}
-
-	return &device, nil
-}
-
-// UnlinkDeviceFromUser 解绑设备
-func (c *AdminClient) UnlinkDeviceFromUser(deviceID uint) (*Device, error) {
-	path := fmt.Sprintf("/api/v1/admin/devices/%d/user", deviceID)
-	resp, err := c.request("DELETE", path, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	var device Device
-	if err := mapToStruct(resp.Data, &device); err != nil {
-		return nil, fmt.Errorf("%w: %v", errs.ErrDataParseFailed, err)
-	}
-
-	return &device, nil
-}
-
 // OfflineDevice 设备下线
 func (c *AdminClient) OfflineDevice(deviceID uint) (*Device, error) {
 	path := fmt.Sprintf("/api/v1/admin/devices/%d/offline", deviceID)
@@ -280,6 +242,68 @@ func (c *AdminClient) GetDeviceStatistics() (*response.DeviceStatistics, error) 
 	}
 
 	return &stats, nil
+}
+
+// GetDeviceGroup 获取设备组详情
+func (c *AdminClient) GetDeviceGroup(groupID uint) (*DeviceGroup, error) {
+	path := fmt.Sprintf("/api/v1/admin/device-groups/%d", groupID)
+	resp, err := c.request("GET", path, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var deviceGroup DeviceGroup
+	if err := mapToStruct(resp.Data, &deviceGroup); err != nil {
+		return nil, fmt.Errorf("%w: %v", errs.ErrDataParseFailed, err)
+	}
+
+	return &deviceGroup, nil
+}
+
+// GetDeviceGroups 获取设备组列表
+func (c *AdminClient) GetDeviceGroups() ([]DeviceGroup, error) {
+	resp, err := c.request("GET", "/api/v1/admin/device-groups", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var deviceGroups []DeviceGroup
+	if err := mapToStruct(resp.Data, &deviceGroups); err != nil {
+		return nil, fmt.Errorf("%w: %v", errs.ErrDataParseFailed, err)
+	}
+
+	return deviceGroups, nil
+}
+
+// UpdateDeviceGroup 更新设备组
+func (c *AdminClient) UpdateDeviceGroup(groupID uint, req *request.UpdateDeviceGroupRequest) (*DeviceGroup, error) {
+	path := fmt.Sprintf("/api/v1/admin/device-groups/%d", groupID)
+	resp, err := c.request("PUT", path, req)
+	if err != nil {
+		return nil, err
+	}
+
+	var deviceGroup DeviceGroup
+	if err := mapToStruct(resp.Data, &deviceGroup); err != nil {
+		return nil, fmt.Errorf("%w: %v", errs.ErrDataParseFailed, err)
+	}
+
+	return &deviceGroup, nil
+}
+
+// GetPendingActivationDevices 获取待激活设备列表
+func (c *AdminClient) GetPendingActivationDevices() ([]Device, error) {
+	resp, err := c.request("GET", "/api/v1/admin/devices/pending-activation", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var devices []Device
+	if err := mapToStruct(resp.Data, &devices); err != nil {
+		return nil, fmt.Errorf("%w: %v", errs.ErrDataParseFailed, err)
+	}
+
+	return devices, nil
 }
 
 // CreateAPIKey 创建API密钥

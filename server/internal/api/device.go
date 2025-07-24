@@ -46,41 +46,6 @@ func DeleteDevice(c echo.Context) error {
 	return c.JSON(http.StatusOK, &response.Response{Success: true, Message: "设备删除成功", Data: &result})
 }
 
-// LinkDeviceToUser 绑定设备到用户
-func LinkDeviceToUser(c echo.Context) error {
-	deviceID, err := parseUintParam(c, "id")
-	if err != nil {
-		return err
-	}
-
-	var req request.LinkDeviceToUserRequest
-	if err := bindAndValidate(c, &req); err != nil {
-		return err
-	}
-
-	device, err := service.LinkDeviceToUser(deviceID, req.UserID)
-	if err != nil {
-		return err
-	}
-
-	return c.JSON(http.StatusOK, &response.Response{Success: true, Message: "设备绑定成功", Data: device})
-}
-
-// UnlinkDeviceFromUser 解绑设备与用户
-func UnlinkDeviceFromUser(c echo.Context) error {
-	deviceID, err := parseUintParam(c, "id")
-	if err != nil {
-		return err
-	}
-
-	device, err := service.UnlinkDeviceFromUser(deviceID)
-	if err != nil {
-		return err
-	}
-
-	return c.JSON(http.StatusOK, &response.Response{Success: true, Message: "设备解绑成功", Data: device})
-}
-
 // OfflineDevice 设备下线
 func OfflineDevice(c echo.Context) error {
 	deviceID, err := parseUintParam(c, "id")
@@ -123,15 +88,11 @@ func GetDevices(c echo.Context) error {
 		}
 	}
 
-	if userIDStr := c.QueryParam("user_id"); userIDStr != "" {
-		if userID, err := strconv.ParseUint(userIDStr, 10, 32); err == nil {
-			userIDUint := uint(userID)
-			filter.UserID = &userIDUint
+	if userIDStr := c.QueryParam("device_group_id"); userIDStr != "" {
+		if groupID, err := strconv.ParseUint(userIDStr, 10, 32); err == nil {
+			groupIDUint := uint(groupID)
+			filter.DeviceGroupID = &groupIDUint
 		}
-	}
-
-	if username := c.QueryParam("username"); username != "" {
-		filter.Username = username
 	}
 
 	if name := c.QueryParam("name"); name != "" {

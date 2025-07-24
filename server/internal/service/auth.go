@@ -47,9 +47,9 @@ func ValidateAPIKey(apiKey string) (*entity.APIKey, error) {
 
 // ValidateAuthKey 验证认证密钥
 func ValidateAuthKey(authKey string, deviceID uint, challenge string) (*entity.Device, error) {
-	// 查找设备信息
+	// 查找设备及其设备组信息
 	var device entity.Device
-	result := global.DB.Where("id = ?", deviceID).First(&device)
+	result := global.DB.Preload("DeviceGroup").Where("id = ?", deviceID).First(&device)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return nil, errs.ErrDeviceNotFound
@@ -62,12 +62,20 @@ func ValidateAuthKey(authKey string, deviceID uint, challenge string) (*entity.D
 		return nil, errs.ErrDeviceNotActive
 	}
 
-	// 使用新的HMAC-SHA256格式验证认证token
+	// 检查设备组是否存在和激活
+	if device.DeviceGroup == nil {
+		return nil, fmt.Errorf("设备未关联到设备组")
+	}
+	if !device.DeviceGroup.IsActive {
+		return nil, fmt.Errorf("设备组未激活")
+	}
+
+	// 使用设备组的认证密钥进行验证
 	if err := auth.ValidateAuthToken(
 		authKey,
 		challenge,
-		device.OnceKey,
-		device.TOTPSecret,
+		device.DeviceGroup.OnceKey,
+		device.DeviceGroup.TOTPSecret,
 		device.SerialNumber,
 		device.VolumeSerialNumber,
 		global.Config.Security.EncryptionKey,
@@ -136,13 +144,15 @@ func ProcessAuthResponse(sessionID string, authResp *messages.AuthResponseMessag
 		return fmt.Errorf("认证密钥验证失败: %w", err)
 	}
 
-	// 验证设备是否具有执行此操作的权限
+	// 验证设备是否具有执行此操作的权限（通过设备组）
 	if session.Action != "" {
 		canPerformAction := false
-		for _, p := range validDevice.Permissions {
-			if p == session.Action || p == "*" {
-				canPerformAction = true
-				break
+		if validDevice.DeviceGroup != nil {
+			for _, p := range validDevice.DeviceGroup.Permissions {
+				if p == session.Action || p == "*" {
+					canPerformAction = true
+					break
+				}
 			}
 		}
 
@@ -203,9 +213,11 @@ func StartAuth(req *request.AuthRequest, apiKey *entity.APIKey, clientIP string)
 		return nil, fmt.Errorf("查询用户失败: %w", result.Error)
 	}
 
-	// 查找用户所有激活的在线设备
+	// 查找用户所有激活的在线设备（通过设备组）
 	var onlineDevices []entity.Device
-	err := global.DB.Where("user_id = ? AND is_active = ? AND is_online = ?", user.ID, true, true).Find(&onlineDevices).Error
+	err := global.DB.Preload("DeviceGroup").Joins("JOIN device_groups ON devices.device_group_id = device_groups.id").
+		Where("device_groups.user_id = ? AND devices.is_active = ? AND devices.is_online = ? AND device_groups.is_active = ?",
+			user.ID, true, true, true).Find(&onlineDevices).Error
 	if err != nil {
 		return nil, fmt.Errorf("查询在线设备失败: %w", err)
 	}
@@ -218,10 +230,12 @@ func StartAuth(req *request.AuthRequest, apiKey *entity.APIKey, clientIP string)
 	if req.Action != "" {
 		canPerformAction := false
 		for _, device := range onlineDevices {
-			for _, p := range device.Permissions {
-				if p == req.Action || p == "*" {
-					canPerformAction = true
-					break
+			if device.DeviceGroup != nil {
+				for _, p := range device.DeviceGroup.Permissions {
+					if p == req.Action || p == "*" {
+						canPerformAction = true
+						break
+					}
 				}
 			}
 			if canPerformAction {

@@ -67,13 +67,23 @@ type OnceKeyUpdateConfirmMessage struct {
 	Error     string `json:"error,omitempty"`
 }
 
-// DeviceRegistrationMessage 设备注册消息
-type DeviceRegistrationMessage struct {
+// DeviceConnectionMessage 设备连接消息（带认证信息）
+type DeviceConnectionMessage struct {
 	SerialNumber       string `json:"serial_number"`
 	VolumeSerialNumber string `json:"volume_serial_number"`
+	TOTPCode           string `json:"totp_code"` // 用于跨平台匹配
+	OnceKey            string `json:"once_key"`  // 用于跨平台匹配
 	DevicePath         string `json:"device_path"`
 	Vendor             string `json:"vendor"`
 	Model              string `json:"model"`
+}
+
+// DeviceConnectionResponseMessage 设备连接响应消息
+type DeviceConnectionResponseMessage struct {
+	Success bool   `json:"success"`
+	Status  string `json:"status"` // connected, pending_activation
+	Message string `json:"message"`
+	Error   string `json:"error,omitempty"`
 }
 
 // DeviceStatusMessage 设备状态消息

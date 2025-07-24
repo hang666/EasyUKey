@@ -6,48 +6,61 @@ import (
 	"time"
 
 	"github.com/hang666/EasyUKey/server/internal/global"
+	"github.com/hang666/EasyUKey/server/internal/model/entity"
 	"github.com/hang666/EasyUKey/server/internal/service"
-	"github.com/hang666/EasyUKey/shared/pkg/errs"
 	"github.com/hang666/EasyUKey/shared/pkg/identity"
 	"github.com/hang666/EasyUKey/shared/pkg/logger"
 	"github.com/hang666/EasyUKey/shared/pkg/messages"
 	"github.com/hang666/EasyUKey/shared/pkg/wsutil"
 )
 
-// handleDeviceRegister 处理设备注册
-func handleDeviceRegister(client *Client, wsMsg *messages.WSMessage) error {
-	// 验证消息
-	if err := wsutil.ValidateMessage(wsMsg); err != nil {
-		return sendErrorToClient(client, "device_register", "validation_error", errs.ErrWSValidation.Error())
-	}
-
-	// 解析注册消息
-	regMsg, err := wsutil.ParseMessage[messages.DeviceRegistrationMessage](wsMsg)
+// handleDeviceConnection 处理设备连接
+func handleDeviceConnection(client *Client, wsMsg *messages.WSMessage) error {
+	// 解析连接消息
+	connMsg, err := wsutil.ParseMessage[messages.DeviceConnectionMessage](wsMsg)
 	if err != nil {
-		return sendErrorToClient(client, "device_register", "parse_error", fmt.Sprintf("解析错误: %s", err.Error()))
+		return sendErrorToClient(client, "device_connection", "parse_error", fmt.Sprintf("解析错误: %s", err.Error()))
 	}
 
-	// 通过序列号查找设备
+	// 1. 尝试通过序列号查找现有设备
 	var device struct {
-		ID     uint
-		UserID uint
+		ID            uint
+		DeviceGroupID *uint
+		IsActive      bool
 	}
 	result := global.DB.Table("devices").
-		Select("id, user_id").
-		Where("serial_number = ? AND volume_serial_number = ?", regMsg.SerialNumber, regMsg.VolumeSerialNumber).
+		Select("id, device_group_id, is_active").
+		Where("serial_number = ? AND volume_serial_number = ?", connMsg.SerialNumber, connMsg.VolumeSerialNumber).
 		First(&device)
 
-	if result.Error != nil {
-		logger.Logger.Error("设备注册失败", "error", result.Error, "serial_number", regMsg.SerialNumber)
-		return sendErrorToClient(client, "device_register", "device_not_found", errs.ErrDeviceNotFoundClient.Error())
+	if result.Error == nil {
+		// 找到现有设备，正常连接
+		return handleExistingDeviceConnection(client, &connMsg, device.ID, device.DeviceGroupID)
+	}
+
+	// 2. 没有找到现有设备，尝试跨平台匹配
+	return handleCrossPlatformDeviceConnection(client, &connMsg)
+}
+
+// handleExistingDeviceConnection 处理现有设备连接
+func handleExistingDeviceConnection(client *Client, connMsg *messages.DeviceConnectionMessage, deviceID uint, deviceGroupID *uint) error {
+	// 如果设备关联了设备组，获取设备组的用户信息
+	if deviceGroupID != nil {
+		var deviceGroup entity.DeviceGroup
+		if err := global.DB.Where("id = ?", *deviceGroupID).First(&deviceGroup).Error; err == nil {
+			if deviceGroup.UserID != nil {
+				client.mu.Lock()
+				client.UserID = *deviceGroup.UserID
+				client.mu.Unlock()
+			}
+		}
 	}
 
 	// 更新客户端信息
 	client.mu.Lock()
-	client.UserID = device.UserID
-	client.DeviceID = device.ID
-	client.SerialNumber = regMsg.SerialNumber
-	client.VolumeSerialNumber = regMsg.VolumeSerialNumber
+	client.DeviceID = deviceID
+	client.SerialNumber = connMsg.SerialNumber
+	client.VolumeSerialNumber = connMsg.VolumeSerialNumber
 	client.IsRegistered = true
 	client.mu.Unlock()
 
@@ -55,12 +68,95 @@ func handleDeviceRegister(client *Client, wsMsg *messages.WSMessage) error {
 	if hub := service.GetWSHub(); hub != nil {
 		if h, ok := hub.(*Hub); ok {
 			h.register <- client
-			// 触发设备连接状态同步
-			hub.OnDeviceConnect(device.ID)
+			hub.OnDeviceConnect(deviceID)
 		}
 	}
 
-	return nil
+	// 发送连接成功响应
+	connResp := &messages.DeviceConnectionResponseMessage{
+		Success: true,
+		Status:  "connected",
+		Message: "设备连接成功",
+	}
+
+	return sendMessageToClient(client, "device_connection_response", connResp)
+}
+
+// handleCrossPlatformDeviceConnection 处理跨平台设备连接
+func handleCrossPlatformDeviceConnection(client *Client, connMsg *messages.DeviceConnectionMessage) error {
+	// 使用设备提供的认证密钥匹配现有设备组
+	matchedGroup, err := service.FindDeviceGroupByAuth(connMsg.TOTPCode, connMsg.OnceKey)
+	if err != nil {
+		logger.Logger.Error("跨平台设备匹配失败", "error", err, "serial_number", connMsg.SerialNumber)
+		return sendErrorToClient(client, "device_connection", "match_error", "跨平台设备匹配失败")
+	}
+
+	if matchedGroup == nil {
+		// 无法匹配到现有设备组，可能是全新设备
+		return sendErrorToClient(client, "device_connection", "no_match", "无法识别的设备，请先进行设备初始化")
+	}
+
+	// 匹配成功，创建新的设备记录并关联到现有设备组
+	deviceID, err := createCrossPlatformDevice(connMsg, matchedGroup)
+	if err != nil {
+		logger.Logger.Error("创建跨平台设备失败", "error", err, "serial_number", connMsg.SerialNumber)
+		return sendErrorToClient(client, "device_connection", "create_error", fmt.Sprintf("创建跨平台设备失败: %v", err))
+	}
+
+	// 更新客户端信息
+	client.mu.Lock()
+	if matchedGroup.UserID != nil {
+		client.UserID = *matchedGroup.UserID
+	}
+	client.DeviceID = deviceID
+	client.SerialNumber = connMsg.SerialNumber
+	client.VolumeSerialNumber = connMsg.VolumeSerialNumber
+	client.IsRegistered = true
+	client.mu.Unlock()
+
+	// 注册到Hub
+	if hub := service.GetWSHub(); hub != nil {
+		if h, ok := hub.(*Hub); ok {
+			h.register <- client
+			hub.OnDeviceConnect(deviceID)
+		}
+	}
+
+	// 发送连接响应
+	connResp := &messages.DeviceConnectionResponseMessage{
+		Success: true,
+		Status:  "pending_activation",
+		Message: "跨平台设备识别成功，等待管理员激活",
+	}
+
+	return sendMessageToClient(client, "device_connection_response", connResp)
+}
+
+// createCrossPlatformDevice 创建跨平台设备记录
+func createCrossPlatformDevice(connMsg *messages.DeviceConnectionMessage, group *entity.DeviceGroup) (uint, error) {
+	// 创建新的设备记录，关联到现有设备组
+	device := entity.Device{
+		Name:               fmt.Sprintf("设备_%s_%s", group.Name, connMsg.SerialNumber[len(connMsg.SerialNumber)-4:]),
+		DeviceGroupID:      &group.ID,
+		SerialNumber:       connMsg.SerialNumber,
+		VolumeSerialNumber: connMsg.VolumeSerialNumber,
+		Remark:             "跨平台自动识别",
+		IsActive:           false, // 重要：设为非激活状态
+		IsOnline:           true,
+		HeartbeatInterval:  30,
+	}
+
+	if err := global.DB.Create(&device).Error; err != nil {
+		return 0, fmt.Errorf("创建跨平台设备记录失败: %w", err)
+	}
+
+	logger.Logger.Info("跨平台设备自动识别成功",
+		"device_id", device.ID,
+		"device_group_id", group.ID,
+		"serial_number", connMsg.SerialNumber,
+		"status", "待管理员激活")
+
+	return device.ID, nil
 }
 
 // handleDeviceInit 处理设备初始化

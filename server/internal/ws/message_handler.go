@@ -14,8 +14,8 @@ func dispatchMessage(client *Client, wsMsg *messages.WSMessage) error {
 		return handleKeyExchangeRequest(client, wsMsg)
 	case "encrypted":
 		return handleEncryptedMessage(client, wsMsg)
-	case "device_register":
-		return handleDeviceRegister(client, wsMsg)
+	case "device_connection":
+		return handleDeviceConnection(client, wsMsg)
 	case "device_init_request":
 		return handleDeviceInit(client, wsMsg)
 	case "auth_response":

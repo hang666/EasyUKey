@@ -14,22 +14,25 @@ import (
 // httpStatusMap 错误对应的HTTP状态码映射
 var httpStatusMap = map[error]int{
 	// 400 Bad Request
-	errs.ErrInvalidRequest:      400,
-	errs.ErrMissingAPIKey:       400,
-	errs.ErrMissingChallenge:    400,
-	errs.ErrMissingSessionID:    400,
-	errs.ErrMissingUsername:     400,
-	errs.ErrMissingName:         400,
-	errs.ErrMissingDeviceInfo:   400,
-	errs.ErrMissingAdminKey:     400,
-	errs.ErrInvalidKey:          400,
-	errs.ErrInvalidDeviceID:     400,
-	errs.ErrDeviceAlreadyExists: 400,
-	errs.ErrDeviceNotActive:     400,
-	errs.ErrDeviceAlreadyBound:  400,
-	errs.ErrUserAlreadyExists:   400,
-	errs.ErrSessionExpired:      400,
-	errs.ErrSessionCompleted:    400,
+	errs.ErrInvalidRequest:         400,
+	errs.ErrMissingAPIKey:          400,
+	errs.ErrMissingChallenge:       400,
+	errs.ErrMissingSessionID:       400,
+	errs.ErrMissingUsername:        400,
+	errs.ErrMissingName:            400,
+	errs.ErrMissingDeviceInfo:      400,
+	errs.ErrMissingAdminKey:        400,
+	errs.ErrInvalidKey:             400,
+	errs.ErrInvalidDeviceID:        400,
+	errs.ErrDeviceAlreadyExists:    400,
+	errs.ErrDeviceNotActive:        400,
+	errs.ErrDeviceAlreadyBound:     400,
+	errs.ErrDeviceGroupNotActive:   400,
+	errs.ErrDeviceGroupNameEmpty:   400,
+	errs.ErrDeviceGroupPermissions: 400,
+	errs.ErrUserAlreadyExists:      400,
+	errs.ErrSessionExpired:         400,
+	errs.ErrSessionCompleted:       400,
 
 	// 401 Unauthorized
 	errs.ErrAPIKeyInvalid: 401,
@@ -38,9 +41,10 @@ var httpStatusMap = map[error]int{
 	errs.ErrPermissionDenied: 403,
 
 	// 404 Not Found
-	errs.ErrUserNotFound:    404,
-	errs.ErrDeviceNotFound:  404,
-	errs.ErrSessionNotFound: 404,
+	errs.ErrUserNotFound:        404,
+	errs.ErrDeviceNotFound:      404,
+	errs.ErrDeviceGroupNotFound: 404,
+	errs.ErrSessionNotFound:     404,
 
 	// 503 Service Unavailable
 	errs.ErrUserNotOnline: 503,

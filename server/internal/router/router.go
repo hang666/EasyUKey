@@ -54,12 +54,17 @@ func SetupRoutes(e *echo.Echo) {
 		// 设备管理
 		admin.GET("/devices", api.GetDevices)
 		admin.GET("/devices/statistics", api.GetDeviceStatistics)
+		admin.GET("/devices/pending-activation", api.GetPendingActivationDevices)
 		admin.GET("/devices/:id", api.GetDevice)
 		admin.PUT("/devices/:id", api.UpdateDevice)
 		admin.DELETE("/devices/:id", api.DeleteDevice)
-		admin.POST("/devices/:id/user", api.LinkDeviceToUser)
-		admin.DELETE("/devices/:id/user", api.UnlinkDeviceFromUser)
 		admin.POST("/devices/:id/offline", api.OfflineDevice)
+
+		// 设备组管理
+		admin.GET("/device-groups", api.GetDeviceGroups)
+		admin.GET("/device-groups/:id", api.GetDeviceGroup)
+		admin.PUT("/device-groups/:id", api.UpdateDeviceGroup)
+		admin.PUT("/device-groups/:id/user", api.LinkDeviceGroupUser)
 
 		// API密钥管理
 		admin.POST("/apikeys", api.CreateAPIKey)

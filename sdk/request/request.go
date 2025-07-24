@@ -42,14 +42,9 @@ type UpdateUserRequest struct {
 
 // UpdateDeviceRequest 更新设备请求
 type UpdateDeviceRequest struct {
-	Name        string   `json:"name,omitempty"`
-	Permissions []string `json:"permissions,omitempty"`
-	IsActive    *bool    `json:"is_active,omitempty"`
-}
-
-// LinkDeviceToUserRequest 绑定设备请求
-type LinkDeviceToUserRequest struct {
-	UserID uint `json:"user_id"`
+	Name     string `json:"name,omitempty"`
+	Remark   string `json:"remark,omitempty"`
+	IsActive *bool  `json:"is_active,omitempty"`
 }
 
 // CreateAPIKeyRequest 创建API密钥请求
@@ -61,11 +56,23 @@ type CreateAPIKeyRequest struct {
 
 // DeviceFilter 设备过滤条件
 type DeviceFilter struct {
-	IsOnline    *bool  `json:"is_online,omitempty"`
-	IsActive    *bool  `json:"is_active,omitempty"`
-	UserID      *uint  `json:"user_id,omitempty"`
-	Username    string `json:"username,omitempty"`
-	Name        string `json:"name,omitempty"`
-	OnlineOnly  bool   `json:"online_only,omitempty"`
-	OfflineOnly bool   `json:"offline_only,omitempty"`
+	IsOnline      *bool  `json:"is_online,omitempty"`
+	IsActive      *bool  `json:"is_active,omitempty"`
+	Name          string `json:"name,omitempty"`
+	DeviceGroupID *uint  `json:"device_group_id,omitempty"`
+	OnlineOnly    bool   `json:"online_only,omitempty"`
+	OfflineOnly   bool   `json:"offline_only,omitempty"`
+}
+
+// UpdateDeviceGroupRequest 更新设备组请求
+type UpdateDeviceGroupRequest struct {
+	Name        string   `json:"name,omitempty"`
+	Description string   `json:"description,omitempty"`
+	Permissions []string `json:"permissions,omitempty"`
+	IsActive    *bool    `json:"is_active,omitempty"`
+}
+
+// LinkDeviceGroupUserRequest 关联设备组用户请求
+type LinkDeviceGroupUserRequest struct {
+	UserID *uint `json:"user_id"` // null表示取消关联
 }

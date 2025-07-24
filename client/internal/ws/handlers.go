@@ -126,11 +126,15 @@ func handleDeviceInitResponse(message messages.WSMessage) {
 	// 等待PIN输入
 	pin, err := global.PinManager.WaitPIN()
 	if err != nil {
+		logger.Logger.Error("PIN获取失败")
+		os.Exit(1)
 		return
 	}
 
 	// 使用PIN保存初始密钥
 	if err := identity.SaveInitialKeys(pin, global.Config.EncryptKeyStr, resp.OnceKey, resp.TOTPURI, global.SecureStoragePath); err != nil {
+		logger.Logger.Error("保存初始密钥失败")
+		os.Exit(1)
 		return
 	}
 
@@ -169,6 +173,28 @@ func handleAuthSuccessResponse(message messages.WSMessage) {
 	}
 
 	SendOnceKeyUpdateConfirm(resp.RequestID, true, "")
+}
+
+// handleDeviceConnectionResponse 处理设备连接响应
+func handleDeviceConnectionResponse(message messages.WSMessage) {
+	dataBytes, err := json.Marshal(message.Data)
+	if err != nil {
+		return
+	}
+	var resp messages.DeviceConnectionResponseMessage
+	err = json.Unmarshal(dataBytes, &resp)
+	if err != nil {
+		return
+	}
+
+	if !resp.Success {
+		logger.Logger.Error("设备连接失败", "error", resp.Error, "message", resp.Message)
+		return
+	}
+
+	if resp.Status == "pending_activation" {
+		logger.Logger.Info("跨平台设备识别成功，等待管理员激活")
+	}
 }
 
 // handlePing 处理心跳请求

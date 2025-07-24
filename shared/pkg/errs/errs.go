@@ -21,6 +21,12 @@ var (
 	ErrDeviceAlreadyExists = errors.New("设备已存在")
 	ErrDeviceAlreadyBound  = errors.New("设备已绑定用户")
 
+	// 设备组错误
+	ErrDeviceGroupNotFound    = errors.New("设备组不存在")
+	ErrDeviceGroupNotActive   = errors.New("设备组未激活")
+	ErrDeviceGroupNameEmpty   = errors.New("设备组名称不能为空")
+	ErrDeviceGroupPermissions = errors.New("设备组权限格式错误")
+
 	// 用户错误
 	ErrUserNotFound      = errors.New("用户不存在")
 	ErrUserAlreadyExists = errors.New("用户名已存在")

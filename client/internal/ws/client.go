@@ -8,7 +8,6 @@ import (
 
 	"github.com/gorilla/websocket"
 
-	"github.com/hang666/EasyUKey/client/internal/confirmation"
 	"github.com/hang666/EasyUKey/shared/pkg/errs"
 	"github.com/hang666/EasyUKey/shared/pkg/identity"
 	"github.com/hang666/EasyUKey/shared/pkg/logger"
@@ -86,13 +85,9 @@ func Connect() error {
 
 	// 根据设备初始化状态发送对应请求
 	if !isDeviceInitialized {
-		// 显示PIN设置页面
-		if err := confirmation.ShowPINSetupPage(); err != nil {
-			logger.Logger.Error("显示PIN设置页面失败", "error", err)
-		}
 		err = SendDeviceInitRequest()
 	} else {
-		err = SendDeviceRegistration()
+		err = SendDeviceConnection()
 	}
 	if err != nil {
 		logger.Logger.Error("发送设备请求失败", "error", err)

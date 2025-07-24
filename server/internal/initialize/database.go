@@ -82,6 +82,7 @@ func AutoMigrate() error {
 	entities := []interface{}{
 		&entity.User{},
 		&entity.Device{},
+		&entity.DeviceGroup{},
 		&entity.AuthSession{},
 		&entity.APIKey{},
 	}

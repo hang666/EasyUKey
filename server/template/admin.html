@@ -264,16 +264,16 @@
 														设备ID
 													</th>
 													<th class="pb-3 text-sm font-medium text-gray-600">
+														设备名称
+													</th>
+													<th class="pb-3 text-sm font-medium text-gray-600">
 														设备序列号
 													</th>
 													<th class="pb-3 text-sm font-medium text-gray-600">
 														卷序列号
 													</th>
 													<th class="pb-3 text-sm font-medium text-gray-600">
-														绑定用户
-													</th>
-													<th class="pb-3 text-sm font-medium text-gray-600">
-														权限
+														设备组
 													</th>
 													<th class="pb-3 text-sm font-medium text-gray-600">
 														状态
@@ -302,6 +302,15 @@
 															<div class="max-w-xs overflow-hidden">
 																<span
 																	class="select-all cursor-text text-ellipsis"
+																	:title="device.name || '未命名'"
+																	x-text="device.name || '未命名'"
+																></span>
+															</div>
+														</td>
+														<td class="py-3 text-sm text-gray-600">
+															<div class="max-w-xs overflow-hidden">
+																<span
+																	class="select-all cursor-text text-ellipsis font-mono"
 																	:title="device.serial_number || '未知'"
 																	x-text="device.serial_number || '未知'"
 																></span>
@@ -310,7 +319,7 @@
 														<td class="py-3 text-sm text-gray-600">
 															<div class="max-w-xs overflow-hidden">
 																<span
-																	class="select-all cursor-text text-ellipsis"
+																	class="select-all cursor-text text-ellipsis font-mono"
 																	:title="device.volume_serial_number || '未知'"
 																	x-text="device.volume_serial_number || '未知'"
 																></span>
@@ -318,20 +327,21 @@
 														</td>
 														<td class="py-3 text-sm text-gray-600">
 															<div class="max-w-xs overflow-hidden">
-																<span
-																	class="select-all cursor-text text-ellipsis"
-																	:title="device.user ? device.user.username : '未绑定'"
-																	x-text="device.user ? device.user.username : '未绑定'"
-																></span>
-															</div>
-														</td>
-														<td class="py-3 text-sm text-gray-600">
-															<div class="max-w-xs overflow-hidden">
-																<span
-																	class="select-all cursor-text text-ellipsis"
-																	:title="device.permissions ? device.permissions.join(', ') : '无'"
-																	x-text="device.permissions ? device.permissions.join(', ') : '无'"
-																></span>
+																<template x-if="device.device_group">
+																	<div class="flex items-center space-x-2">
+																		<span
+																			class="font-medium"
+																			x-text="device.device_group.name"
+																		></span>
+																		<span
+																			class="text-xs text-gray-500"
+																			x-text="'(ID: ' + device.device_group.id + ')'"
+																		></span>
+																	</div>
+																</template>
+																<template x-if="!device.device_group">
+																	<span class="text-gray-400">未分组</span>
+																</template>
 															</div>
 														</td>
 														<td class="py-3">
@@ -354,22 +364,6 @@
 																<i class="fas fa-edit"></i>
 															</button>
 															<button
-																x-show="device.user"
-																@click="unlinkDevice(device)"
-																class="text-red-600 hover:text-red-800"
-																title="解绑用户"
-															>
-																<i class="fas fa-unlink"></i>
-															</button>
-															<button
-																x-show="!device.user"
-																@click="openLinkModal(device)"
-																class="text-green-600 hover:text-green-800"
-																title="绑定用户"
-															>
-																<i class="fas fa-link"></i>
-															</button>
-															<button
 																@click="offlineDevice(device)"
 																class="text-orange-600 hover:text-orange-800"
 																:disabled="!device.is_online"
@@ -389,7 +383,7 @@
 												</template>
 												<tr x-show="!devices.length">
 													<td
-														colspan="7"
+														colspan="8"
 														class="py-8 text-center text-gray-500"
 													>
 														暂无设备数据
@@ -884,6 +878,255 @@
 								</div>
 							</div>
 						</div>
+
+						<!-- 设备组管理 -->
+						<div
+							x-show="currentTab === 'device-groups'"
+							x-cloak
+							class="fade-in"
+						>
+							<div class="space-y-6">
+								<!-- 待激活设备列表 -->
+								<div class="bg-white rounded-lg shadow">
+									<div
+										class="px-6 py-4 border-b border-gray-200 flex items-center justify-between"
+									>
+										<h3 class="text-lg font-semibold text-gray-800">
+											待激活跨平台设备
+										</h3>
+										<button
+											@click="loadPendingDevices()"
+											class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+										>
+											<i class="fas fa-sync-alt mr-2"></i>刷新
+										</button>
+									</div>
+									<div class="p-6">
+										<div class="overflow-x-auto">
+											<table class="w-full table-auto">
+												<thead>
+													<tr class="border-b border-gray-200 text-left">
+														<th class="pb-3 text-sm font-medium text-gray-600">
+															设备ID
+														</th>
+														<th class="pb-3 text-sm font-medium text-gray-600">
+															设备组
+														</th>
+														<th class="pb-3 text-sm font-medium text-gray-600">
+															序列号
+														</th>
+														<th class="pb-3 text-sm font-medium text-gray-600">
+															卷序列号
+														</th>
+														<th class="pb-3 text-sm font-medium text-gray-600">
+															设备信息
+														</th>
+														<th class="pb-3 text-sm font-medium text-gray-600">
+															创建时间
+														</th>
+														<th class="pb-3 text-sm font-medium text-gray-600">
+															操作
+														</th>
+													</tr>
+												</thead>
+												<tbody>
+													<template
+														x-for="device in pendingDevices"
+														:key="device.id"
+													>
+														<tr class="border-b border-gray-100">
+															<td
+																class="py-3 text-sm font-medium text-gray-900"
+																x-text="device.id"
+															></td>
+															<td class="py-3 text-sm text-gray-600">
+																<div class="flex items-center space-x-2">
+																	<span
+																		class="font-medium"
+																		x-text="device.device_group?.name || 'N/A'"
+																	></span>
+																	<span
+																		class="text-xs text-gray-500"
+																		x-text="'(ID: ' + (device.device_group_id || 'N/A') + ')'"
+																	></span>
+																</div>
+															</td>
+															<td class="py-3 text-sm text-gray-600 font-mono">
+																<span
+																	class="select-all cursor-text"
+																	x-text="device.serial_number"
+																></span>
+															</td>
+															<td class="py-3 text-sm text-gray-600 font-mono">
+																<span
+																	class="select-all cursor-text"
+																	x-text="device.volume_serial_number"
+																></span>
+															</td>
+															<td class="py-3 text-sm text-gray-600">
+																<div class="space-y-1">
+																	<div>
+																		<span class="font-medium">厂商:</span>
+																		<span
+																			x-text="device.vendor || 'N/A'"
+																		></span>
+																	</div>
+																	<div>
+																		<span class="font-medium">型号:</span>
+																		<span x-text="device.model || 'N/A'"></span>
+																	</div>
+																</div>
+															</td>
+															<td
+																class="py-3 text-sm text-gray-600"
+																x-text="formatTime(device.created_at)"
+															></td>
+															<td class="py-3 text-sm">
+																<button
+																	@click="showActivateDeviceModal(device)"
+																	class="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+																>
+																	<i class="fas fa-check mr-1"></i>激活
+																</button>
+															</td>
+														</tr>
+													</template>
+													<tr x-show="!pendingDevices.length">
+														<td
+															colspan="7"
+															class="py-8 text-center text-gray-500"
+														>
+															暂无待激活设备
+														</td>
+													</tr>
+												</tbody>
+											</table>
+										</div>
+									</div>
+								</div>
+
+								<!-- 设备组列表 -->
+								<div class="bg-white rounded-lg shadow">
+									<div
+										class="px-6 py-4 border-b border-gray-200 flex items-center justify-between"
+									>
+										<h3 class="text-lg font-semibold text-gray-800">
+											设备组列表
+										</h3>
+									</div>
+									<div class="p-6">
+										<div class="overflow-x-auto">
+											<table class="w-full table-auto">
+												<thead>
+													<tr class="border-b border-gray-200 text-left">
+														<th class="pb-3 text-sm font-medium text-gray-600">
+															组ID
+														</th>
+														<th class="pb-3 text-sm font-medium text-gray-600">
+															组名
+														</th>
+														<th class="pb-3 text-sm font-medium text-gray-600">
+															描述
+														</th>
+														<th class="pb-3 text-sm font-medium text-gray-600">
+															所属用户
+														</th>
+														<th class="pb-3 text-sm font-medium text-gray-600">
+															设备数量
+														</th>
+														<th class="pb-3 text-sm font-medium text-gray-600">
+															状态
+														</th>
+														<th class="pb-3 text-sm font-medium text-gray-600">
+															操作
+														</th>
+													</tr>
+												</thead>
+												<tbody>
+													<template
+														x-for="group in deviceGroups"
+														:key="group.id"
+													>
+														<tr class="border-b border-gray-100">
+															<td
+																class="py-3 text-sm font-medium text-gray-900"
+																x-text="group.id"
+															></td>
+															<td
+																class="py-3 text-sm text-gray-900 font-medium"
+																x-text="group.name"
+															></td>
+															<td class="py-3 text-sm text-gray-600">
+																<div class="max-w-xs overflow-hidden">
+																	<span
+																		class="text-ellipsis"
+																		:title="group.description"
+																		x-text="group.description || '无描述'"
+																	></span>
+																</div>
+															</td>
+															<td
+																class="py-3 text-sm text-gray-600"
+																x-text="group.user?.username || 'N/A'"
+															></td>
+															<td
+																class="py-3 text-sm text-gray-600"
+																x-text="group.devices?.length || 0"
+															></td>
+															<td class="py-3 text-sm">
+																<span
+																	class="px-2 py-1 rounded-full text-xs font-medium"
+																	:class="{
+																		'bg-green-100 text-green-800': group.is_active,
+																		'bg-gray-100 text-gray-800': !group.is_active
+																	}"
+																	x-text="group.is_active ? '已激活' : '未激活'"
+																></span>
+															</td>
+															<td class="py-3 text-sm space-x-2">
+																<button
+																	@click="viewGroupDetails(group)"
+																	class="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+																>
+																	<i class="fas fa-eye mr-1"></i>查看
+																</button>
+																<button
+																	@click="editDeviceGroup(group)"
+																	class="px-3 py-1 bg-yellow-600 text-white rounded hover:bg-yellow-700 transition-colors"
+																>
+																	<i class="fas fa-edit mr-1"></i>编辑
+																</button>
+																<button
+																	@click="openLinkUserModal(group)"
+																	class="px-3 py-1 bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors"
+																>
+																	<i class="fas fa-user mr-1"></i>关联用户
+																</button>
+																<button
+																	x-show="!group.is_active"
+																	@click="activateGroup(group.id)"
+																	class="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+																>
+																	<i class="fas fa-check mr-1"></i>激活
+																</button>
+															</td>
+														</tr>
+													</template>
+													<tr x-show="!deviceGroups.length">
+														<td
+															colspan="7"
+															class="py-8 text-center text-gray-500"
+														>
+															暂无设备组
+														</td>
+													</tr>
+												</tbody>
+											</table>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
 					</main>
 				</div>
 			</div>
@@ -1042,17 +1285,14 @@
 							</div>
 							<div class="mb-4">
 								<label class="block text-sm font-medium text-gray-700 mb-2"
-									>权限</label
+									>设备备注</label
 								>
 								<textarea
-									x-model="deviceForm.permissions"
+									x-model="deviceForm.remark"
 									class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-									rows="3"
-									placeholder='["login", "pay"]'
+									rows="2"
+									placeholder="输入设备备注信息"
 								></textarea>
-								<p class="text-xs text-gray-500 mt-1">
-									设备权限必须在绑定用户的权限范围内
-								</p>
 							</div>
 							<div class="mb-4">
 								<label class="flex items-center">
@@ -1084,37 +1324,271 @@
 				</div>
 			</div>
 
-			<!-- 设备绑定用户模态框 -->
+			<!-- 激活设备模态框 -->
 			<div
-				x-show="showLinkModal"
+				x-show="showActivateDeviceModal"
 				x-cloak
 				class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
 			>
 				<div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
 					<div class="px-6 py-4 border-b border-gray-200">
-						<h3 class="text-lg font-semibold text-gray-800">绑定用户</h3>
+						<h3 class="text-lg font-semibold text-gray-800">激活跨平台设备</h3>
 					</div>
 					<div class="p-6">
-						<form @submit.prevent="linkDevice()">
+						<div class="mb-4 p-4 bg-gray-50 rounded-lg">
+							<div class="text-sm space-y-1">
+								<div>
+									<span class="font-medium">设备ID:</span>
+									<span x-text="selectedPendingDevice?.id"></span>
+								</div>
+								<div>
+									<span class="font-medium">序列号:</span>
+									<span x-text="selectedPendingDevice?.serial_number"></span>
+								</div>
+								<div>
+									<span class="font-medium">卷序列号:</span>
+									<span
+										x-text="selectedPendingDevice?.volume_serial_number"
+									></span>
+								</div>
+								<div>
+									<span class="font-medium">设备组:</span>
+									<span
+										x-text="selectedPendingDevice?.device_group?.name"
+									></span>
+								</div>
+							</div>
+						</div>
+						<form @submit.prevent="activateDevice()">
 							<div class="mb-4">
 								<label class="block text-sm font-medium text-gray-700 mb-2"
-									>选择用户</label
+									>备注 (可选)</label
 								>
-								<select
-									x-model="linkUserId"
-									class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-									required
-								>
-									<option value="">请选择用户</option>
-									<template x-for="user in users" :key="user.id">
-										<option :value="user.id" x-text="user.username"></option>
-									</template>
-								</select>
+								<input
+									x-model="activateForm.remark"
+									type="text"
+									class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+									placeholder="输入设备备注信息"
+								/>
 							</div>
 							<div class="flex space-x-3">
 								<button
 									type="button"
-									@click="showLinkModal = false; selectedDevice = null; linkUserId = ''"
+									@click="showActivateDeviceModal = false; selectedPendingDevice = null; resetActivateForm()"
+									class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+								>
+									取消
+								</button>
+								<button
+									type="submit"
+									class="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+								>
+									激活
+								</button>
+							</div>
+						</form>
+					</div>
+				</div>
+			</div>
+
+			<!-- 设备组详情模态框 -->
+			<div
+				x-show="showGroupDetailsModal"
+				x-cloak
+				class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+			>
+				<div
+					class="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-auto"
+				>
+					<div class="px-6 py-4 border-b border-gray-200">
+						<h3 class="text-lg font-semibold text-gray-800">设备组详情</h3>
+					</div>
+					<div class="p-6">
+						<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+							<div class="space-y-3">
+								<div>
+									<span class="font-medium">组ID:</span>
+									<span x-text="selectedGroup?.id"></span>
+								</div>
+								<div>
+									<span class="font-medium">组名:</span>
+									<span x-text="selectedGroup?.name"></span>
+								</div>
+								<div>
+									<span class="font-medium">描述:</span>
+									<span x-text="selectedGroup?.description || '无描述'"></span>
+								</div>
+							</div>
+							<div class="space-y-3">
+								<div>
+									<span class="font-medium">所属用户:</span>
+									<span
+										x-text="selectedGroup?.user?.username || '未绑定'"
+									></span>
+								</div>
+								<div>
+									<span class="font-medium">状态:</span>
+									<span
+										class="px-2 py-1 rounded-full text-xs font-medium"
+										:class="{
+											'bg-green-100 text-green-800': selectedGroup?.is_active,
+											'bg-gray-100 text-gray-800': !selectedGroup?.is_active
+										}"
+										x-text="selectedGroup?.is_active ? '已激活' : '未激活'"
+									></span>
+								</div>
+								<div>
+									<span class="font-medium">创建时间:</span>
+									<span x-text="formatTime(selectedGroup?.created_at)"></span>
+								</div>
+							</div>
+						</div>
+
+						<div class="border-t border-gray-200 pt-6">
+							<h4 class="text-lg font-medium text-gray-800 mb-4">
+								关联设备 (<span
+									x-text="selectedGroup?.devices?.length || 0"
+								></span
+								>)
+							</h4>
+							<div class="overflow-x-auto">
+								<table class="w-full table-auto">
+									<thead>
+										<tr class="border-b border-gray-200 text-left">
+											<th class="pb-3 text-sm font-medium text-gray-600">
+												设备ID
+											</th>
+											<th class="pb-3 text-sm font-medium text-gray-600">
+												序列号
+											</th>
+											<th class="pb-3 text-sm font-medium text-gray-600">
+												卷序列号
+											</th>
+											<th class="pb-3 text-sm font-medium text-gray-600">
+												状态
+											</th>
+											<th class="pb-3 text-sm font-medium text-gray-600">
+												备注
+											</th>
+										</tr>
+									</thead>
+									<tbody>
+										<template
+											x-for="device in selectedGroup?.devices"
+											:key="device.id"
+										>
+											<tr class="border-b border-gray-100">
+												<td
+													class="py-3 text-sm font-medium text-gray-900"
+													x-text="device.id"
+												></td>
+												<td
+													class="py-3 text-sm text-gray-600 font-mono"
+													x-text="device.serial_number"
+												></td>
+												<td
+													class="py-3 text-sm text-gray-600 font-mono"
+													x-text="device.volume_serial_number"
+												></td>
+												<td class="py-3 text-sm">
+													<span
+														class="px-2 py-1 rounded-full text-xs font-medium"
+														:class="{
+															'bg-green-100 text-green-800': device.is_active,
+															'bg-gray-100 text-gray-800': !device.is_active
+														}"
+														x-text="device.is_active ? '已激活' : '未激活'"
+													></span>
+												</td>
+												<td
+													class="py-3 text-sm text-gray-600"
+													x-text="device.remark || '-'"
+												></td>
+											</tr>
+										</template>
+										<tr x-show="!selectedGroup?.devices?.length">
+											<td colspan="5" class="py-8 text-center text-gray-500">
+												暂无关联设备
+											</td>
+										</tr>
+									</tbody>
+								</table>
+							</div>
+						</div>
+
+						<div class="flex justify-end space-x-3 mt-6">
+							<button
+								@click="showGroupDetailsModal = false; selectedGroup = null"
+								class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+							>
+								关闭
+							</button>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- 编辑设备组模态框 -->
+			<div
+				x-show="showEditGroupModal"
+				x-cloak
+				class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+			>
+				<div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+					<div class="px-6 py-4 border-b border-gray-200">
+						<h3 class="text-lg font-semibold text-gray-800">编辑设备组</h3>
+					</div>
+					<div class="p-6">
+						<form @submit.prevent="updateDeviceGroup()">
+							<div class="mb-4">
+								<label class="block text-sm font-medium text-gray-700 mb-2"
+									>组名</label
+								>
+								<input
+									x-model="editGroupForm.name"
+									type="text"
+									required
+									class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+									placeholder="输入设备组名称"
+								/>
+							</div>
+							<div class="mb-4">
+								<label class="block text-sm font-medium text-gray-700 mb-2"
+									>描述</label
+								>
+								<textarea
+									x-model="editGroupForm.description"
+									rows="3"
+									class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+									placeholder="输入设备组描述"
+								></textarea>
+							</div>
+							<div class="mb-4">
+								<label class="block text-sm font-medium text-gray-700 mb-2"
+									>权限 (可选)</label
+								>
+								<textarea
+									x-model="editGroupForm.permissions"
+									rows="2"
+									class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+									placeholder='["login", "pay"]'
+								></textarea>
+								<p class="text-xs text-gray-500 mt-1">JSON格式的权限数组</p>
+							</div>
+							<div class="mb-4">
+								<label class="flex items-center">
+									<input
+										x-model="editGroupForm.is_active"
+										type="checkbox"
+										class="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+									/>
+									<span class="ml-2 text-sm text-gray-700">设备组激活</span>
+								</label>
+							</div>
+							<div class="flex space-x-3">
+								<button
+									type="button"
+									@click="showEditGroupModal = false; selectedEditGroup = null; resetEditGroupForm()"
 									class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
 								>
 									取消
@@ -1123,7 +1597,67 @@
 									type="submit"
 									class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
 								>
-									绑定
+									更新
+								</button>
+							</div>
+						</form>
+					</div>
+				</div>
+			</div>
+
+			<!-- 关联用户模态框 -->
+			<div
+				x-show="showLinkUserModal"
+				x-cloak
+				class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+			>
+				<div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+					<div class="px-6 py-4 border-b border-gray-200">
+						<h3 class="text-lg font-semibold text-gray-800">关联用户</h3>
+					</div>
+					<div class="p-6">
+						<div class="mb-4 p-4 bg-gray-50 rounded-lg">
+							<div class="text-sm space-y-1">
+								<div>
+									<span class="font-medium">设备组:</span>
+									<span x-text="selectedLinkGroup?.name"></span>
+								</div>
+								<div>
+									<span class="font-medium">当前用户:</span>
+									<span
+										x-text="selectedLinkGroup?.user?.username || '未关联'"
+									></span>
+								</div>
+							</div>
+						</div>
+						<form @submit.prevent="linkDeviceGroupUser()">
+							<div class="mb-4">
+								<label class="block text-sm font-medium text-gray-700 mb-2">
+									选择用户 (留空表示取消关联)
+								</label>
+								<select
+									x-model="linkUserForm.user_id"
+									class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+								>
+									<option value="">取消关联</option>
+									<template x-for="user in users" :key="user.id">
+										<option :value="user.id" x-text="user.username"></option>
+									</template>
+								</select>
+							</div>
+							<div class="flex space-x-3">
+								<button
+									type="button"
+									@click="showLinkUserModal = false"
+									class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+								>
+									取消
+								</button>
+								<button
+									type="submit"
+									class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+								>
+									确认
 								</button>
 							</div>
 						</form>
@@ -1158,7 +1692,11 @@
 					showModal: false,
 					showUserModal: false,
 					showDeviceModal: false,
-					showLinkModal: false,
+					showCreateGroupModal: false,
+					showEditGroupModal: false,
+					showActivateDeviceModal: false,
+					showGroupDetailsModal: false,
+					showLinkUserModal: false,
 					loginError: "",
 					authToken: null,
 					adminKey: "",
@@ -1178,6 +1716,12 @@
 							name: "仪表盘",
 							desc: "系统概览和统计信息",
 							icon: "fas fa-chart-line",
+						},
+						{
+							id: "device-groups",
+							name: "设备组管理",
+							desc: "管理设备组和跨平台设备",
+							icon: "fas fa-layer-group",
 						},
 						{
 							id: "devices",
@@ -1247,10 +1791,32 @@
 					users: [],
 					apikeys: [],
 					sessions: [],
+					deviceGroups: [],
+					pendingDevices: [],
 					newKey: { name: "", description: "", is_admin: false },
 					selectedDevice: null,
 					selectedUser: null,
-					linkUserId: "",
+					selectedGroup: null,
+					selectedEditGroup: null,
+					selectedPendingDevice: null,
+					selectedLinkGroup: null,
+					groupForm: {
+						name: "",
+						description: "",
+						user_id: undefined,
+						permissions: "",
+					},
+					editGroupForm: {
+						name: "",
+						description: "",
+						user_id: undefined,
+						permissions: "",
+						is_active: true,
+					},
+					activateForm: { remark: "" },
+					linkUserForm: {
+						user_id: "",
+					},
 					userForm: {
 						username: "",
 						permissions: '["login"]',
@@ -1258,7 +1824,7 @@
 					},
 					deviceForm: {
 						name: "",
-						permissions: "[]",
+						remark: "",
 						is_active: true,
 					},
 
@@ -1365,6 +1931,9 @@
 								await this.loadDevices();
 							} else if (this.currentTab === "users") {
 								await this.loadUsers();
+							} else if (this.currentTab === "device-groups") {
+								await this.loadDeviceGroups();
+								await this.loadPendingDevices();
 							} else if (this.currentTab === "apikeys") {
 								await this.loadApiKeys();
 							} else if (this.currentTab === "sessions") {
@@ -1618,18 +2187,9 @@
 						this.loading = true;
 
 						try {
-							let permissions;
-							try {
-								permissions = JSON.parse(this.deviceForm.permissions || "[]");
-							} catch (e) {
-								this.showMsg("权限格式错误，请使用JSON数组格式", "error");
-								this.loading = false;
-								return;
-							}
-
 							const deviceData = {
 								name: this.deviceForm.name,
-								permissions: permissions,
+								remark: this.deviceForm.remark,
 								is_active: this.deviceForm.is_active,
 							};
 
@@ -1650,56 +2210,6 @@
 							}
 						} catch (error) {
 							this.showMsg("更新失败: " + error.message, "error");
-						} finally {
-							this.loading = false;
-						}
-					},
-
-					async linkDevice() {
-						if (!this.selectedDevice || !this.linkUserId) return;
-						this.loading = true;
-
-						try {
-							const result = await this.api(
-								`/api/v1/admin/devices/${this.selectedDevice.id}/user`,
-								{
-									method: "POST",
-									body: JSON.stringify({ user_id: parseInt(this.linkUserId) }),
-								}
-							);
-
-							if (result.success) {
-								await this.loadDevices();
-								this.showLinkModal = false;
-								this.selectedDevice = null;
-								this.linkUserId = "";
-								this.showMsg("设备绑定成功");
-							}
-						} catch (error) {
-							this.showMsg("绑定失败: " + error.message, "error");
-						} finally {
-							this.loading = false;
-						}
-					},
-
-					async unlinkDevice(device) {
-						if (!confirm(`确定要解绑设备 ${device.id} 吗？`)) return;
-						this.loading = true;
-
-						try {
-							const result = await this.api(
-								`/api/v1/admin/devices/${device.id}/user`,
-								{
-									method: "DELETE",
-								}
-							);
-
-							if (result.success) {
-								await this.loadDevices();
-								this.showMsg("设备解绑成功");
-							}
-						} catch (error) {
-							this.showMsg("解绑失败: " + error.message, "error");
 						} finally {
 							this.loading = false;
 						}
@@ -1812,18 +2322,10 @@
 						this.selectedDevice = device;
 						this.deviceForm = {
 							name: device.name || "",
-							permissions: JSON.stringify(device.permissions || []),
+							remark: device.remark || "",
 							is_active: device.is_active,
 						};
 						this.showDeviceModal = true;
-					},
-
-					async openLinkModal(device) {
-						this.selectedDevice = device;
-						this.linkUserId = "";
-						this.showLinkModal = true;
-						// 刷新用户列表
-						await this.loadUsers();
 					},
 
 					resetUserForm() {
@@ -1837,8 +2339,209 @@
 					resetDeviceForm() {
 						this.deviceForm = {
 							name: "",
-							permissions: "[]",
+							remark: "",
 							is_active: true,
+						};
+					},
+
+					// 设备组管理方法
+					async loadDeviceGroups() {
+						try {
+							const result = await this.api("/api/v1/admin/device-groups");
+							if (result.success) {
+								this.deviceGroups = result.data || [];
+							}
+						} catch (error) {
+							this.showMsg("加载设备组失败: " + error.message, "error");
+						}
+					},
+
+					async loadPendingDevices() {
+						try {
+							const result = await this.api(
+								"/api/v1/admin/devices/pending-activation"
+							);
+							if (result.success) {
+								this.pendingDevices = result.data || [];
+							}
+						} catch (error) {
+							this.showMsg("加载待激活设备失败: " + error.message, "error");
+						}
+					},
+
+					// 显示关联用户模态框
+					async openLinkUserModal(group) {
+						await this.loadUsers();
+						this.selectedLinkGroup = group;
+						this.linkUserForm.user_id = group.user_id || "";
+						this.showLinkUserModal = true;
+					},
+
+					// 关联设备组用户
+					async linkDeviceGroupUser() {
+						if (!this.selectedLinkGroup) return;
+
+						try {
+							const payload = {
+								user_id: this.linkUserForm.user_id
+									? Number(this.linkUserForm.user_id)
+									: null,
+							};
+
+							const result = await this.api(
+								`/api/v1/admin/device-groups/${this.selectedLinkGroup.id}/user`,
+								{
+									method: "PUT",
+									body: JSON.stringify(payload),
+								}
+							);
+
+							if (result.success) {
+								this.showMsg(result.message, "success");
+								this.showLinkUserModal = false;
+								await this.loadDeviceGroups();
+							}
+						} catch (error) {
+							this.showMsg("关联用户失败: " + error.message, "error");
+						}
+					},
+
+					showActivateDeviceModal(device) {
+						this.selectedPendingDevice = device;
+						this.resetActivateForm();
+						this.showActivateDeviceModal = true;
+					},
+
+					async activateDevice() {
+						try {
+							const deviceData = {
+								remark: this.activateForm.remark || "管理员激活",
+								is_active: true,
+							};
+
+							const result = await this.api(
+								`/api/v1/admin/devices/${this.selectedPendingDevice.id}`,
+								{
+									method: "PUT",
+									body: JSON.stringify(deviceData),
+								}
+							);
+
+							if (result.success) {
+								this.showMsg("设备激活成功", "success");
+								this.showActivateDeviceModal = false;
+								this.selectedPendingDevice = null;
+								this.resetActivateForm();
+								await this.loadPendingDevices();
+								await this.loadDeviceGroups();
+							}
+						} catch (error) {
+							this.showMsg("激活设备失败: " + error.message, "error");
+						}
+					},
+
+					async viewGroupDetails(group) {
+						try {
+							const result = await this.api(
+								`/api/v1/admin/device-groups/${group.id}`
+							);
+							if (result.success) {
+								this.selectedGroup = result.data;
+								this.showGroupDetailsModal = true;
+							}
+						} catch (error) {
+							this.showMsg("获取设备组详情失败: " + error.message, "error");
+						}
+					},
+
+					async activateGroup(groupId) {
+						if (!confirm("确定要激活此设备组吗？")) return;
+
+						try {
+							const result = await this.api(
+								`/api/v1/admin/device-groups/${groupId}/activate`,
+								{ method: "POST" }
+							);
+
+							if (result.success) {
+								this.showMsg("设备组激活成功", "success");
+								await this.loadDeviceGroups();
+							}
+						} catch (error) {
+							this.showMsg("激活设备组失败: " + error.message, "error");
+						}
+					},
+
+					async editDeviceGroup(group) {
+						this.selectedEditGroup = group;
+						this.editGroupForm = {
+							name: group.name,
+							description: group.description || "",
+							permissions: group.permissions
+								? JSON.stringify(group.permissions)
+								: "",
+							is_active: group.is_active,
+						};
+						this.showEditGroupModal = true;
+					},
+
+					async updateDeviceGroup() {
+						if (!this.selectedEditGroup) return;
+						this.loading = true;
+
+						try {
+							let permissions = [];
+							if (this.editGroupForm.permissions) {
+								try {
+									permissions = JSON.parse(this.editGroupForm.permissions);
+								} catch (e) {
+									this.showMsg("权限格式错误，请使用JSON数组格式", "error");
+									this.loading = false;
+									return;
+								}
+							}
+
+							const payload = {
+								name: this.editGroupForm.name,
+								description: this.editGroupForm.description,
+								permissions: permissions,
+								is_active: this.editGroupForm.is_active,
+							};
+
+							const result = await this.api(
+								`/api/v1/admin/device-groups/${this.selectedEditGroup.id}`,
+								{
+									method: "PUT",
+									body: JSON.stringify(payload),
+								}
+							);
+
+							if (result.success) {
+								this.showMsg("设备组更新成功", "success");
+								this.showEditGroupModal = false;
+								this.selectedEditGroup = null;
+								this.resetEditGroupForm();
+								await this.loadDeviceGroups();
+							}
+						} catch (error) {
+							this.showMsg("更新设备组失败: " + error.message, "error");
+						} finally {
+							this.loading = false;
+						}
+					},
+
+					resetEditGroupForm() {
+						this.editGroupForm = {
+							name: "",
+							description: "",
+							permissions: "",
+							is_active: true,
+						};
+					},
+
+					resetActivateForm() {
+						this.activateForm = {
+							remark: "",
 						};
 					},
 				};

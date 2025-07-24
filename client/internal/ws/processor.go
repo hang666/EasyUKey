@@ -58,6 +58,8 @@ func dispatchMessage(message messages.WSMessage) {
 		go handleAuthRequest(message) // Run in a goroutine to not block the read loop
 	case "device_init_response":
 		handleDeviceInitResponse(message)
+	case "device_connection_response":
+		handleDeviceConnectionResponse(message)
 	case "auth_success_response":
 		handleAuthSuccessResponse(message)
 	case "ping":

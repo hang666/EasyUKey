@@ -62,7 +62,7 @@
 	</head>
 	<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
 		<div
-			x-data="pinSetup()"
+			x-data="pinSetup({{.IsInitialized}})"
 			x-init="init()"
 			class="min-h-screen flex items-center justify-center p-4"
 		>
@@ -85,8 +85,11 @@
 								<i class="fas fa-key"></i>
 							</div>
 						</div>
-						<h1 class="text-2xl font-bold text-gray-800 mb-2">设置 PIN 密码</h1>
-						<p class="text-gray-600">请设置您的6位数字PIN密码</p>
+						<h1
+							class="text-2xl font-bold text-gray-800 mb-2"
+							x-text="isInitialized ? '验证 PIN 密码' : '设置 PIN 密码'"
+						></h1>
+						<p class="text-gray-600">请输入您的6位数字PIN密码</p>
 					</div>
 
 					<!-- PIN输入区域 -->
@@ -133,14 +136,26 @@
 							class="w-full bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 disabled:from-gray-300 disabled:to-gray-400 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 flex items-center justify-center transform hover:scale-105 disabled:transform-none"
 						>
 							<i class="fas fa-check mr-2"></i>
-							设置PIN密码
+							<span
+								x-text="isInitialized ? '验证PIN密码' : '设置PIN密码'"
+							></span>
 						</button>
 					</div>
 
 					<!-- 提示信息 -->
 					<div class="text-center text-sm text-gray-500">
-						<p>PIN密码用于加密保护您的认证信息</p>
-						<p>请牢记此密码，遗失后需要重新初始化</p>
+						<template x-if="isInitialized">
+							<div>
+								<p>请输入您设置的6位数字PIN密码</p>
+								<p>PIN密码用于解密您的认证信息</p>
+							</div>
+						</template>
+						<template x-if="!isInitialized">
+							<div>
+								<p>PIN密码用于加密保护您的认证信息</p>
+								<p>请牢记此密码，遗失后需要重新初始化</p>
+							</div>
+						</template>
 					</div>
 				</div>
 
@@ -155,7 +170,7 @@
 						</div>
 						<h1
 							class="text-2xl font-bold text-gray-800 mb-2"
-							x-text="success ? 'PIN设置成功' : 'PIN设置失败'"
+							x-text="success ? (isInitialized ? 'PIN验证成功' : 'PIN设置成功') : (isInitialized ? 'PIN验证失败' : 'PIN设置失败')"
 						></h1>
 						<p class="text-lg text-gray-600" x-text="resultMessage"></p>
 					</div>
@@ -174,14 +189,17 @@
 						<div
 							class="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"
 						></div>
-						<p class="text-gray-600">正在设置PIN...</p>
+						<p
+							class="text-gray-600"
+							x-text="isInitialized ? '正在验证PIN...' : '正在设置PIN...'"
+						></p>
 					</div>
 				</div>
 			</div>
 		</div>
 
 		<script>
-			function pinSetup() {
+			function pinSetup(isInitialized) {
 				return {
 					pin: "",
 					loading: false,
@@ -189,6 +207,7 @@
 					success: false,
 					resultMessage: "",
 					errorMessage: "",
+					isInitialized: isInitialized,
 
 					get isComplete() {
 						return this.pin.length === 6;

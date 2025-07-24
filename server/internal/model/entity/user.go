@@ -17,7 +17,7 @@ type User struct {
 	DeletedAt   gorm.DeletedAt `gorm:"index" json:"deleted_at,omitempty"`
 
 	// 关联关系
-	Devices []Device `gorm:"foreignKey:UserID" json:"devices,omitempty"`
+	DeviceGroups []DeviceGroup `gorm:"foreignKey:UserID" json:"device_groups,omitempty"`
 }
 
 // TableName 指定表名
