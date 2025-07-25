@@ -15,8 +15,6 @@ import (
 	"unicode"
 )
 
-// TODO 未经测试
-
 // LinuxBlockDevice lsblk 输出的块设备信息
 type LinuxBlockDevice struct {
 	Name       string             `json:"name"`
