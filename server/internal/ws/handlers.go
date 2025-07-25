@@ -284,10 +284,16 @@ func handleAuthResponse(client *Client, wsMsg *messages.WSMessage) error {
 
 	// 处理认证响应
 	if err := service.ProcessAuthResponse(authResp.RequestID, &authResp); err != nil {
+		// 服务端验证失败，发送失败响应给客户端
+		failureResp := &messages.AuthSuccessResponseMessage{
+			RequestID: authResp.RequestID,
+			Success:   false,
+		}
+		sendMessageToClient(client, "auth_success_response", failureResp)
 		return err
 	}
 
-	// 如果用户同意认证，需要生成新的OnceKey
+	// 只有在服务端验证成功且客户端同意认证时，才生成新的OnceKey
 	if authResp.Success {
 		newOnceKey, err := service.UpdateDeviceOnceKey(client.DeviceID, authResp.UsedKey)
 		if err != nil {

@@ -102,8 +102,7 @@ func handleAuthRequest(message messages.WSMessage) {
 
 	SendAuthResponse(authReq.RequestID, true, authKey, currentOnceKey, dev.SerialNumber, dev.VolumeSerialNumber, "")
 
-	// 通知HTTP API认证成功
-	confirmation.SendResult(true, "认证成功")
+	// 认证响应已发送，等待服务端的 auth_success_response 消息来确定最终结果
 }
 
 // handleDeviceInitResponse 处理设备初始化响应
@@ -154,6 +153,8 @@ func handleAuthSuccessResponse(message messages.WSMessage) {
 	}
 
 	if !resp.Success {
+		// 服务端认证失败，通知页面
+		confirmation.SendResult(false, "服务端认证验证失败")
 		SendOnceKeyUpdateConfirm(resp.RequestID, false, "客户端收到错误响应")
 		return
 	}
@@ -173,6 +174,9 @@ func handleAuthSuccessResponse(message messages.WSMessage) {
 	}
 
 	SendOnceKeyUpdateConfirm(resp.RequestID, true, "")
+
+	// 在确认收到服务端成功响应并完成OnceKey更新后，通知页面认证成功
+	confirmation.SendResult(true, "认证成功")
 }
 
 // handleDeviceConnectionResponse 处理设备连接响应

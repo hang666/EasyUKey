@@ -123,7 +123,10 @@ cd build
 
 ```bash
 # 设置加密密钥和服务器地址
+# windows
 make client ENCRYPT_KEY_STR=123456789 SERVER_ADDR=http://localhost:8888
+# linux
+make client-linux ENCRYPT_KEY_STR=123456789 SERVER_ADDR=http://localhost:8888
 ```
 
 2. **部署到USB设备**
@@ -131,6 +134,32 @@ make client ENCRYPT_KEY_STR=123456789 SERVER_ADDR=http://localhost:8888
 将构建好的客户端复制到USB设备
 在USB设备上运行客户端程序即可使用
 需在管理后台添加用户将设备与用户绑定
+
+如遇到Linux无权限问题，请在终端使用以下方法重新挂载U盘并运行：
+
+```bash
+#!/bin/bash
+
+read -p "请输入当前U盘挂载路径（例如 /media/liveuser/KINGSTON）: " MOUNT_PATH
+DEVICE=$(lsblk -rpn -o NAME,MOUNTPOINT | grep "$MOUNT_PATH" | awk '{print $1}')
+if [ -z "$DEVICE" ]; then
+    echo "❌ 未找到对应设备，请确认挂载路径正确。"
+    exit 1
+fi
+echo "🔧 正在卸载 $DEVICE..."
+sudo umount "$DEVICE" || { echo "❌ 卸载失败"; exit 1; }
+sudo mkdir -p /mnt/ukey_exec
+echo "🔧 正在重新挂载 $DEVICE 到 /mnt/ukey_exec ..."
+UID=$(id -u)
+GID=$(id -g)
+sudo mount -o uid=$UID,gid=$GID,fmask=0000,dmask=0000,utf8,exec "$DEVICE" /mnt/ukey_exec || { echo "❌ 挂载失败"; exit 1; }
+echo "✅ 已重新挂载到 /mnt/ukey_exec，并设置当前用户为属主"
+sudo chmod +x /mnt/ukey_exec/easyukey-client 2>/dev/null
+sudo mkdir -p /mnt/ukey_exec/logs/
+sudo mkdir -p /mnt/ukey_exec/.secure/
+sudo chmod -R 777 /mnt/ukey_exec/logs/ 2>/dev/null
+sudo chmod -R 777 /mnt/ukey_exec/.secure/ 2>/dev/null
+```
 
 ## 🎯 使用场景
 
@@ -147,9 +176,8 @@ make client ENCRYPT_KEY_STR=123456789 SERVER_ADDR=http://localhost:8888
 
 ## 📝 TODO
 
-* [ ] 实现多平台支持
-* [ ] 完善认证流程细节
-* [ ] 完善管理页面
+* [ ] 实现Macos客户端支持
+* [ ] 优化认证流程细节
 * [ ] 完善文档
 
 ## 🤝 贡献指南

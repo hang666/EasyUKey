@@ -7,8 +7,10 @@ var DevMode = "false"
 
 // USBDevice 表示一个 USB 设备信息
 type USBDevice struct {
-	// DevicePath 设备路径
+	// DevicePath 设备路径（Windows为驱动器盘符如C:，Linux为挂载点如/media/usb）
 	DevicePath string `json:"device_path"`
+	// DeviceNode 设备节点（Linux下为/dev/sdb1等，Windows下为空）
+	DeviceNode string `json:"device_node"`
 	// SerialNumber 序列号
 	SerialNumber string `json:"serial_number"`
 	// Label 设备标签/名称
@@ -75,4 +77,24 @@ func FindDeviceByDrive(volume string) (*USBDevice, error) {
 		}
 	}
 	return nil, fmt.Errorf("未找到设备: %s", volume)
+}
+
+// FindDeviceByDevicePath 根据设备节点路径获取特定的 USB 设备（用于Linux）
+func FindDeviceByDevicePath(devicePath string) (*USBDevice, error) {
+	devices, err := GetUSBDevices()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, device := range devices {
+		// 在Linux中比较设备节点
+		if device.DeviceNode == devicePath {
+			return &device, nil
+		}
+		// 也支持通过挂载点匹配（向后兼容）
+		if device.DevicePath == devicePath {
+			return &device, nil
+		}
+	}
+	return nil, fmt.Errorf("未找到设备: %s", devicePath)
 }

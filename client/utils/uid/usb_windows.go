@@ -110,6 +110,7 @@ func getUSBDevices() ([]USBDevice, error) {
 		if len(drivePartitions) == 0 {
 			device := USBDevice{
 				DevicePath:         drive.DeviceID,
+				DeviceNode:         "", // Windows中设备节点为空
 				SerialNumber:       sanitizeString(drive.SerialNumber),
 				Model:              sanitizeString(drive.Model),
 				Size:               drive.Size,
@@ -123,6 +124,11 @@ func getUSBDevices() ([]USBDevice, error) {
 				device.Vendor = parts[0]
 			}
 
+			// 如果最终还是没有序列号，设置为"null"
+			if device.SerialNumber == "" {
+				device.SerialNumber = "null"
+			}
+
 			devices = append(devices, device)
 			continue
 		}
@@ -134,6 +140,7 @@ func getUSBDevices() ([]USBDevice, error) {
 			if logicalDisk != nil {
 				device := USBDevice{
 					DevicePath:         logicalDisk.DeviceID,
+					DeviceNode:         "", // Windows中设备节点为空
 					SerialNumber:       sanitizeString(drive.SerialNumber),
 					Label:              sanitizeString(logicalDisk.VolumeName),
 					Size:               logicalDisk.Size,
@@ -145,6 +152,11 @@ func getUSBDevices() ([]USBDevice, error) {
 				// 从型号中提取厂商信息
 				if parts := strings.Fields(device.Model); len(parts) > 0 {
 					device.Vendor = parts[0]
+				}
+
+				// 如果最终还是没有序列号，设置为"null"
+				if device.SerialNumber == "" {
+					device.SerialNumber = "null"
 				}
 
 				devices = append(devices, device)

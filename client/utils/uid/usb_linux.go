@@ -19,18 +19,19 @@ import (
 
 // LinuxBlockDevice lsblk 输出的块设备信息
 type LinuxBlockDevice struct {
-	Name       string `json:"name"`
-	MountPoint string `json:"mountpoint"`
-	Label      string `json:"label"`
-	UUID       string `json:"uuid"`
-	FsType     string `json:"fstype"`
-	Size       string `json:"size"` // lsblk 返回的是字符串格式如 "1G", "512M"
-	Type       string `json:"type"`
-	Removable  bool   `json:"rm"`
-	Vendor     string `json:"vendor"`
-	Model      string `json:"model"`
-	Serial     string `json:"serial"`
-	Tran       string `json:"tran"` // 传输类型：usb, sata, etc.
+	Name       string             `json:"name"`
+	MountPoint string             `json:"mountpoint"`
+	Label      string             `json:"label"`
+	UUID       string             `json:"uuid"`
+	FsType     string             `json:"fstype"`
+	Size       string             `json:"size"` // lsblk 返回的是字符串格式如 "1G", "512M"
+	Type       string             `json:"type"`
+	Removable  bool               `json:"rm"`
+	Vendor     string             `json:"vendor"`
+	Model      string             `json:"model"`
+	Serial     string             `json:"serial"`
+	Tran       string             `json:"tran"`     // 传输类型：usb, sata, etc.
+	Children   []LinuxBlockDevice `json:"children"` // 子设备（分区）
 }
 
 func getUSBDevices() ([]USBDevice, error) {
@@ -49,19 +50,32 @@ func getUSBDevices() ([]USBDevice, error) {
 			continue
 		}
 
-		// 只处理有挂载点的设备
-		if bd.MountPoint == "" {
-			continue
+		// 检查主设备是否有挂载点的分区
+		foundMountedPartition := false
+
+		// 检查子设备（分区）是否有挂载点
+		for _, child := range bd.Children {
+			if child.MountPoint != "" {
+				// 使用父设备的基本信息构建USB设备，但使用子设备的挂载信息
+				device, err := buildUSBDeviceFromPartition(bd, child)
+				if err != nil {
+					// 记录错误但继续处理其他设备
+					continue
+				}
+				devices = append(devices, device)
+				foundMountedPartition = true
+			}
 		}
 
-		// 获取设备的详细信息
-		device, err := buildUSBDevice(bd)
-		if err != nil {
-			// 记录错误但继续处理其他设备
-			continue
+		// 如果没有找到已挂载的分区，但主设备本身有挂载点，则处理主设备
+		if !foundMountedPartition && bd.MountPoint != "" {
+			device, err := buildUSBDevice(bd)
+			if err != nil {
+				// 记录错误但继续处理其他设备
+				continue
+			}
+			devices = append(devices, device)
 		}
-
-		devices = append(devices, device)
 	}
 
 	return devices, nil
@@ -88,25 +102,66 @@ func getBlockDevices() ([]LinuxBlockDevice, error) {
 	// 展开嵌套的设备（包括分区）
 	var allDevices []LinuxBlockDevice
 	for _, device := range result.BlockDevices {
-		allDevices = append(allDevices, flattenBlockDevice(device)...)
+		allDevices = append(allDevices, device)
 	}
 
 	return allDevices, nil
 }
 
-// flattenBlockDevice 展开块设备及其子设备（分区）
-func flattenBlockDevice(device LinuxBlockDevice) []LinuxBlockDevice {
-	var devices []LinuxBlockDevice
-	devices = append(devices, device)
-	// lsblk 的 JSON 输出中子设备通常在 children 字段中，但我们的结构没有定义它
-	// 这里简化处理，只返回当前设备
-	return devices
+// buildUSBDeviceFromPartition 从主设备和分区信息构建 USBDevice 结构
+func buildUSBDeviceFromPartition(parent LinuxBlockDevice, partition LinuxBlockDevice) (USBDevice, error) {
+	device := USBDevice{
+		DevicePath:         partition.MountPoint,                // 使用分区的挂载点
+		DeviceNode:         "/dev/" + partition.Name,            // 使用分区的设备节点
+		SerialNumber:       strings.TrimSpace(parent.Serial),    // 使用主设备的序列号
+		Label:              strings.TrimSpace(partition.Label),  // 使用分区的标签
+		FileSystem:         strings.TrimSpace(partition.FsType), // 使用分区的文件系统
+		VolumeSerialNumber: strings.TrimSpace(partition.UUID),   // 使用分区的UUID
+		Vendor:             strings.TrimSpace(parent.Vendor),    // 使用主设备的厂商
+		Model:              strings.TrimSpace(parent.Model),     // 使用主设备的型号
+		Size:               parseSizeString(partition.Size),     // 使用分区的大小
+	}
+
+	// 如果分区没有大小信息，使用主设备的大小
+	if device.Size == 0 {
+		device.Size = parseSizeString(parent.Size)
+	}
+
+	// 如果没有序列号，尝试从 udev 属性获取
+	if device.SerialNumber == "" {
+		deviceName := "/dev/" + parent.Name
+		if serialFromUdev := getDeviceSerialFromUdev(deviceName); serialFromUdev != "" {
+			device.SerialNumber = serialFromUdev
+		}
+	}
+
+	// 如果没有厂商信息，尝试从 Model 中提取
+	if device.Vendor == "" && device.Model != "" {
+		if parts := strings.Fields(device.Model); len(parts) > 0 {
+			device.Vendor = parts[0]
+		}
+	}
+
+	// 获取设备大小（如果都没有提供）
+	if device.Size == 0 {
+		if size := getDeviceSize(partition.MountPoint); size > 0 {
+			device.Size = size
+		}
+	}
+
+	// 如果最终还是没有序列号，设置为"null"
+	if device.SerialNumber == "" {
+		device.SerialNumber = "null"
+	}
+
+	return device, nil
 }
 
 // buildUSBDevice 构建 USBDevice 结构
 func buildUSBDevice(bd LinuxBlockDevice) (USBDevice, error) {
 	device := USBDevice{
 		DevicePath:         bd.MountPoint,
+		DeviceNode:         "/dev/" + bd.Name, // 添加设备节点
 		SerialNumber:       strings.TrimSpace(bd.Serial),
 		Label:              strings.TrimSpace(bd.Label),
 		FileSystem:         strings.TrimSpace(bd.FsType),
@@ -136,6 +191,11 @@ func buildUSBDevice(bd LinuxBlockDevice) (USBDevice, error) {
 		if size := getDeviceSize(bd.MountPoint); size > 0 {
 			device.Size = size
 		}
+	}
+
+	// 如果最终还是没有序列号，设置为"null"
+	if device.SerialNumber == "" {
+		device.SerialNumber = "null"
 	}
 
 	return device, nil
