@@ -14,8 +14,8 @@ type AuthSession struct {
 	RespondingDeviceID *uint          `json:"responding_device_id"`       // 最终响应本次认证的设备主键 (Device.ID)
 	Challenge          string         `gorm:"not null" json:"challenge"`  // 挑战码
 	Action             string         `json:"action"`                     // 本次认证请求的操作/权限
-	Status             string         `gorm:"not null" json:"status"`     // "pending", "completed", "failed", "expired", "rejected"
-	Result             string         `json:"result"`                     // "success", "failure"
+	Status             string         `gorm:"not null" json:"status"`     // 认证状态：pending, processing, processing_oncekey, completed, failed, expired, rejected
+	Result             string         `json:"result"`                     // 认证结果：success, failure
 	CallbackURL        string         `json:"callback_url"`               // 回调URL
 	ClientIP           string         `json:"client_ip"`                  // 客户端IP地址
 	CreatedAt          time.Time      `json:"created_at"`
@@ -33,20 +33,3 @@ type AuthSession struct {
 func (AuthSession) TableName() string {
 	return "auth_sessions"
 }
-
-// 认证状态常量
-const (
-	AuthStatusPending           = "pending"
-	AuthStatusProcessing        = "processing"
-	AuthStatusProcessingOnceKey = "processing_oncekey"
-	AuthStatusCompleted         = "completed"
-	AuthStatusFailed            = "failed"
-	AuthStatusExpired           = "expired"
-	AuthStatusRejected          = "rejected"
-)
-
-// 认证结果常量
-const (
-	AuthResultSuccess = "success"
-	AuthResultFailure = "failure"
-)

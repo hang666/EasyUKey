@@ -145,8 +145,8 @@ func TestAuthWorkflow(t *testing.T) {
 		return
 	}
 
-	t.Logf("VerifyAuth结果: Success=%v, UserID=%d, Username=%s",
-		verifyData.Success, verifyData.UserID, verifyData.Username)
+	t.Logf("VerifyAuth结果: Status=%s, Result=%s, UserID=%d, Username=%s",
+		verifyData.Status, verifyData.Result, verifyData.UserID, verifyData.Username)
 }
 
 // TestAuthWorkflowWithPolling 测试完整认证流程（带轮询验证）
@@ -181,8 +181,8 @@ func TestAuthWorkflowWithPolling(t *testing.T) {
 		return
 	}
 
-	t.Logf("初始VerifyAuth结果: Success=%v, UserID=%d, Username=%s",
-		verifyData.Success, verifyData.UserID, verifyData.Username)
+	t.Logf("初始VerifyAuth结果: Status=%s, Result=%s, UserID=%d, Username=%s",
+		verifyData.Status, verifyData.Result, verifyData.UserID, verifyData.Username)
 
 	// 第三步：轮询验证结果，每分钟内每五秒检查一次
 	timeout := time.After(1 * time.Minute)
@@ -205,11 +205,17 @@ func TestAuthWorkflowWithPolling(t *testing.T) {
 				continue
 			}
 
-			t.Logf("轮询VerifyAuth结果: Success=%v, UserID=%d, Username=%s",
-				verifyData.Success, verifyData.UserID, verifyData.Username)
+			t.Logf("轮询VerifyAuth结果: Status=%s, Result=%s, UserID=%d, Username=%s",
+				verifyData.Status, verifyData.Result, verifyData.UserID, verifyData.Username)
 
-			if verifyData.Success {
+			// 检查认证是否成功完成
+			if verifyData.Status == "completed" && verifyData.Result == "success" {
 				t.Log("认证成功完成！")
+				return
+			}
+			// 检查认证是否失败或被拒绝
+			if verifyData.Status == "failed" || verifyData.Status == "expired" || verifyData.Status == "rejected" {
+				t.Logf("认证失败，状态: %s, 结果: %s", verifyData.Status, verifyData.Result)
 				return
 			}
 		}

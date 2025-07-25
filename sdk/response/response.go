@@ -19,7 +19,8 @@ type AuthData struct {
 
 // VerifyAuthData 验证认证数据
 type VerifyAuthData struct {
-	Success  bool   `json:"success"`
+	Status   string `json:"status"`           // 详细状态：pending, processing, processing_oncekey, completed, failed, expired, rejected
+	Result   string `json:"result,omitempty"` // 认证结果：success, failure (仅在completed状态时有值)
 	UserID   uint   `json:"user_id,omitempty"`
 	Username string `json:"username,omitempty"`
 	Message  string `json:"message,omitempty"`

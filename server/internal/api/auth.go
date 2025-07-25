@@ -5,6 +5,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 
+	"github.com/hang666/EasyUKey/sdk/consts"
 	"github.com/hang666/EasyUKey/sdk/request"
 	"github.com/hang666/EasyUKey/sdk/response"
 	"github.com/hang666/EasyUKey/server/internal/model/entity"
@@ -67,10 +68,11 @@ func VerifyAuth(c echo.Context) error {
 	}
 
 	verifyData := &response.VerifyAuthData{
-		Success:  session.Status == "completed",
+		Status:   session.Status,
+		Result:   session.Result,
 		UserID:   session.UserID,
 		Username: "",
-		Message:  "验证成功",
+		Message:  getStatusMessage(session.Status, session.Result),
 	}
 
 	// 如果用户信息已加载，则填充Username
@@ -80,7 +82,32 @@ func VerifyAuth(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, &response.Response{
 		Success: true,
-		Message: "验证成功",
+		Message: "验证查询成功",
 		Data:    verifyData,
 	})
+}
+
+// getStatusMessage 根据认证状态和结果生成相应的消息
+func getStatusMessage(status, result string) string {
+	switch status {
+	case consts.AuthStatusPending:
+		return "等待用户确认认证"
+	case consts.AuthStatusProcessing:
+		return "认证处理中"
+	case consts.AuthStatusProcessingOnceKey:
+		return "正在更新密钥"
+	case consts.AuthStatusCompleted:
+		if result == consts.AuthResultSuccess {
+			return "认证成功"
+		}
+		return "认证失败"
+	case consts.AuthStatusFailed:
+		return "认证处理失败"
+	case consts.AuthStatusExpired:
+		return "认证请求已过期"
+	case consts.AuthStatusRejected:
+		return "用户拒绝认证"
+	default:
+		return "未知状态"
+	}
 }

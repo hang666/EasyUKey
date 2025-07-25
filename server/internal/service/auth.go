@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 
+	"github.com/hang666/EasyUKey/sdk/consts"
 	"github.com/hang666/EasyUKey/sdk/request"
 	"github.com/hang666/EasyUKey/server/internal/global"
 	"github.com/hang666/EasyUKey/server/internal/model/entity"
@@ -102,15 +103,15 @@ func ProcessAuthResponse(sessionID string, authResp *messages.AuthResponseMessag
 	if session.ExpiresAt.Before(time.Now()) {
 		// 更新会话状态为过期
 		global.DB.Model(&session).Updates(map[string]interface{}{
-			"status": entity.AuthStatusExpired,
+			"status": consts.AuthStatusExpired,
 		})
 		return errs.ErrSessionExpired
 	}
 
 	// 原子性更新会话状态为处理中，防止重复处理
 	updateResult := global.DB.Model(&session).
-		Where("id = ? AND status = ?", sessionID, entity.AuthStatusPending).
-		Update("status", entity.AuthStatusProcessing)
+		Where("id = ? AND status = ?", sessionID, consts.AuthStatusPending).
+		Update("status", consts.AuthStatusProcessing)
 	if updateResult.Error != nil {
 		return fmt.Errorf("更新会话状态失败: %w", updateResult.Error)
 	}
@@ -136,8 +137,8 @@ func ProcessAuthResponse(sessionID string, authResp *messages.AuthResponseMessag
 		// 在密钥验证失败时也记录失败状态
 		updates := map[string]interface{}{
 			"responding_device_id": &device.ID,
-			"status":               entity.AuthStatusFailed,
-			"result":               entity.AuthResultFailure,
+			"status":               consts.AuthStatusFailed,
+			"result":               consts.AuthResultFailure,
 		}
 		global.DB.Model(&session).Updates(updates) // 尝试更新，忽略错误
 
@@ -162,8 +163,8 @@ func ProcessAuthResponse(sessionID string, authResp *messages.AuthResponseMessag
 			// 更新会话状态为失败并返回错误
 			updates := map[string]interface{}{
 				"responding_device_id": &validDevice.ID,
-				"status":               entity.AuthStatusFailed,
-				"result":               entity.AuthResultFailure,
+				"status":               consts.AuthStatusFailed,
+				"result":               consts.AuthResultFailure,
 			}
 			if err := global.DB.Model(&session).Updates(updates).Error; err != nil {
 				return fmt.Errorf("更新认证会话失败: %w", err)
@@ -178,17 +179,17 @@ func ProcessAuthResponse(sessionID string, authResp *messages.AuthResponseMessag
 	}
 
 	if authResp.Success {
-		updates["status"] = entity.AuthStatusProcessingOnceKey
+		updates["status"] = consts.AuthStatusProcessingOnceKey
 		logger.Logger.Info("用户同意认证，开始处理OnceKey更新", "session_id", sessionID, "device_id", validDevice.ID)
 	} else {
 		// 认证失败，区分用户拒绝和其他失败情况
-		updates["result"] = entity.AuthResultFailure
+		updates["result"] = consts.AuthResultFailure
 
 		if authResp.Error == errs.ErrUserRejected.Error() {
-			updates["status"] = entity.AuthStatusRejected
+			updates["status"] = consts.AuthStatusRejected
 			logger.Logger.Info("认证拒绝", "session_id", sessionID, "device_id", validDevice.ID)
 		} else {
-			updates["status"] = entity.AuthStatusFailed
+			updates["status"] = consts.AuthStatusFailed
 			logger.Logger.Info("认证失败", "session_id", sessionID, "error", authResp.Error)
 		}
 	}
@@ -264,7 +265,7 @@ func StartAuth(req *request.AuthRequest, apiKey *entity.APIKey, clientIP string)
 		APIKeyID:    apiKey.ID,
 		Challenge:   req.Challenge,
 		Action:      req.Action,
-		Status:      entity.AuthStatusPending,
+		Status:      consts.AuthStatusPending,
 		ExpiresAt:   expiresAt,
 		CallbackURL: req.CallbackURL,
 		ClientIP:    clientIP,
@@ -319,7 +320,7 @@ func sendAuthCallback(session *entity.AuthSession, serialNumber string) {
 	}
 
 	// 设置状态
-	if session.Status == entity.AuthStatusCompleted && session.Result == entity.AuthResultSuccess {
+	if session.Status == consts.AuthStatusCompleted && session.Result == consts.AuthResultSuccess {
 		callbackReq.Status = "success"
 	} else {
 		callbackReq.Status = "failed"
@@ -386,7 +387,7 @@ func sendHTTPCallback(url string, req *messages.CallbackRequest) bool {
 func CompleteOnceKeyUpdateAuth(requestID string, success bool, errorMessage string) error {
 	// 查找正在处理OnceKey的认证会话
 	var session entity.AuthSession
-	result := global.DB.Where("id = ? AND status = ?", requestID, entity.AuthStatusProcessingOnceKey).First(&session)
+	result := global.DB.Where("id = ? AND status = ?", requestID, consts.AuthStatusProcessingOnceKey).First(&session)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			logger.Logger.Warn("未找到正在处理OnceKey的认证会话", "request_id", requestID)
@@ -399,13 +400,13 @@ func CompleteOnceKeyUpdateAuth(requestID string, success bool, errorMessage stri
 
 	if success {
 		// OnceKey更新确认成功
-		updates["status"] = entity.AuthStatusCompleted
-		updates["result"] = entity.AuthResultSuccess
+		updates["status"] = consts.AuthStatusCompleted
+		updates["result"] = consts.AuthResultSuccess
 		logger.Logger.Info("OnceKey更新确认成功，认证完成", "session_id", requestID)
 	} else {
 		// OnceKey更新确认失败，认证失败
-		updates["status"] = entity.AuthStatusFailed
-		updates["result"] = entity.AuthResultFailure
+		updates["status"] = consts.AuthStatusFailed
+		updates["result"] = consts.AuthResultFailure
 		logger.Logger.Error("OnceKey更新确认失败，认证失败", "session_id", requestID, "error", errorMessage)
 	}
 

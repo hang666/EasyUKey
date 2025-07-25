@@ -6,6 +6,7 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/hang666/EasyUKey/sdk/consts"
 	"github.com/hang666/EasyUKey/sdk/errs"
 	"github.com/hang666/EasyUKey/sdk/request"
 	"github.com/hang666/EasyUKey/sdk/response"
@@ -83,9 +84,14 @@ func (h *AuthHelper) WaitForAuth(apiKey, sessionID string, timeout time.Duration
 			continue
 		}
 
-		if result.Success {
+		// 检查认证是否已经完成（无论成功或失败）
+		if result.Status == consts.AuthStatusCompleted ||
+			result.Status == consts.AuthStatusFailed ||
+			result.Status == consts.AuthStatusExpired ||
+			result.Status == consts.AuthStatusRejected {
 			return result, nil
 		}
+
 	}
 	return nil, errs.ErrAuthTimeout
 }
