@@ -983,7 +983,7 @@
 															></td>
 															<td class="py-3 text-sm">
 																<button
-																	@click="showActivateDeviceModal(device)"
+																	@click="openActivateDeviceModal(device)"
 																	class="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
 																>
 																	<i class="fas fa-check mr-1"></i>激活
@@ -2406,7 +2406,7 @@
 						}
 					},
 
-					showActivateDeviceModal(device) {
+					openActivateDeviceModal(device) {
 						this.selectedPendingDevice = device;
 						this.resetActivateForm();
 						this.showActivateDeviceModal = true;

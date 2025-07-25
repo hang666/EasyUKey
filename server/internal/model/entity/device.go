@@ -14,7 +14,7 @@ type Device struct {
 	SerialNumber       string         `gorm:"unique;not null" json:"serial_number"`        // 硬件序列号 (来自客户端)
 	VolumeSerialNumber string         `gorm:"unique;not null" json:"volume_serial_number"` // 卷序列号 (来自客户端)
 	Remark             string         `json:"remark"`                                      // 设备备注，如"跨平台自动识别"
-	IsActive           bool           `gorm:"default:true" json:"is_active"`               // 设备是否激活（管理状态）
+	IsActive           bool           `gorm:"default:false" json:"is_active"`              // 设备是否激活（管理状态）
 	IsOnline           bool           `gorm:"default:false" json:"is_online"`              // 设备是否在线（实时状态）
 	LastHeartbeat      *time.Time     `gorm:"index" json:"last_heartbeat"`                 // 最后心跳时间
 	LastOnlineAt       *time.Time     `json:"last_online_at"`                              // 最后上线时间

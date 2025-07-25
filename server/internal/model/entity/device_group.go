@@ -19,7 +19,7 @@ type DeviceGroup struct {
 	OnceKey         string `gorm:"not null;index" json:"-"` // 当前有效的一次性密钥
 	LastUsedOnceKey string `gorm:"index" json:"-"`          // 上次使用的一次性密钥
 
-	IsActive  bool           `gorm:"default:true;index" json:"is_active"` // 设备组是否激活
+	IsActive  bool           `gorm:"default:false;index" json:"is_active"` // 设备组是否激活
 	CreatedAt time.Time      `json:"created_at"`
 	UpdatedAt time.Time      `json:"updated_at"`
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"deleted_at,omitempty"`

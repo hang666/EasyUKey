@@ -30,7 +30,7 @@ func handleDeviceConnection(client *Client, wsMsg *messages.WSMessage) error {
 	}
 	result := global.DB.Table("devices").
 		Select("id, device_group_id, is_active").
-		Where("serial_number = ? AND volume_serial_number = ?", connMsg.SerialNumber, connMsg.VolumeSerialNumber).
+		Where("serial_number = ? AND volume_serial_number = ? AND deleted_at IS NULL", connMsg.SerialNumber, connMsg.VolumeSerialNumber).
 		First(&device)
 
 	if result.Error == nil {
@@ -172,7 +172,7 @@ func handleDeviceReconnect(client *Client, wsMsg *messages.WSMessage) error {
 	}
 	result := global.DB.Table("devices").
 		Select("id, device_group_id, is_active").
-		Where("serial_number = ? AND volume_serial_number = ?", connMsg.SerialNumber, connMsg.VolumeSerialNumber).
+		Where("serial_number = ? AND volume_serial_number = ? AND deleted_at IS NULL", connMsg.SerialNumber, connMsg.VolumeSerialNumber).
 		First(&device)
 
 	if result.Error != nil {
@@ -252,7 +252,7 @@ func handleDeviceInit(client *Client, wsMsg *messages.WSMessage) error {
 		var deviceID uint
 		result := global.DB.Table("devices").
 			Select("id").
-			Where("serial_number = ? AND volume_serial_number = ?", initMsg.SerialNumber, initMsg.VolumeSerialNumber).
+			Where("serial_number = ? AND volume_serial_number = ? AND deleted_at IS NULL", initMsg.SerialNumber, initMsg.VolumeSerialNumber).
 			Pluck("id", &deviceID)
 		if result.Error == nil && deviceID > 0 {
 			client.mu.Lock()
