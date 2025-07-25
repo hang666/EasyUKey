@@ -82,6 +82,8 @@ func createNewDeviceWithGroup(initReq *messages.DeviceInitRequestMessage) (strin
 		DeviceGroupID:      &deviceGroup.ID,
 		SerialNumber:       initReq.SerialNumber,
 		VolumeSerialNumber: initReq.VolumeSerialNumber,
+		Vendor:             initReq.Vendor,
+		Model:              initReq.Model,
 		Remark:             "设备初始化",
 		IsActive:           false,
 		IsOnline:           false,

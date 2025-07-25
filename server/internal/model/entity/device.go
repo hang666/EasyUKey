@@ -13,6 +13,8 @@ type Device struct {
 	Name               string         `gorm:"not null" json:"name"`                        // 用户为设备设置的别名, 如 "我的主力UKey"
 	SerialNumber       string         `gorm:"unique;not null" json:"serial_number"`        // 硬件序列号 (来自客户端)
 	VolumeSerialNumber string         `gorm:"unique;not null" json:"volume_serial_number"` // 卷序列号 (来自客户端)
+	Vendor             string         `json:"vendor"`                                      // 设备厂商 (来自客户端)
+	Model              string         `json:"model"`                                       // 设备型号 (来自客户端)
 	Remark             string         `json:"remark"`                                      // 设备备注，如"跨平台自动识别"
 	IsActive           bool           `gorm:"default:false" json:"is_active"`              // 设备是否激活（管理状态）
 	IsOnline           bool           `gorm:"default:false" json:"is_online"`              // 设备是否在线（实时状态）

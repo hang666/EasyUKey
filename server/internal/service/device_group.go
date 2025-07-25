@@ -63,6 +63,8 @@ func ConvertToDeviceResponse(device *entity.Device) *response.DeviceResponse {
 		Name:               device.Name,
 		SerialNumber:       device.SerialNumber,
 		VolumeSerialNumber: device.VolumeSerialNumber,
+		Vendor:             device.Vendor,
+		Model:              device.Model,
 		Remark:             device.Remark,
 		IsActive:           device.IsActive,
 		IsOnline:           device.IsOnline,

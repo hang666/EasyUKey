@@ -273,6 +273,12 @@
 														卷序列号
 													</th>
 													<th class="pb-3 text-sm font-medium text-gray-600">
+														厂商
+													</th>
+													<th class="pb-3 text-sm font-medium text-gray-600">
+														型号
+													</th>
+													<th class="pb-3 text-sm font-medium text-gray-600">
 														设备组
 													</th>
 													<th class="pb-3 text-sm font-medium text-gray-600">
@@ -322,6 +328,24 @@
 																	class="select-all cursor-text text-ellipsis font-mono"
 																	:title="device.volume_serial_number || '未知'"
 																	x-text="device.volume_serial_number || '未知'"
+																></span>
+															</div>
+														</td>
+														<td class="py-3 text-sm text-gray-600">
+															<div class="max-w-xs overflow-hidden">
+																<span
+																	class="select-all cursor-text text-ellipsis"
+																	:title="device.vendor || '未知'"
+																	x-text="device.vendor || '未知'"
+																></span>
+															</div>
+														</td>
+														<td class="py-3 text-sm text-gray-600">
+															<div class="max-w-xs overflow-hidden">
+																<span
+																	class="select-all cursor-text text-ellipsis"
+																	:title="device.model || '未知'"
+																	x-text="device.model || '未知'"
 																></span>
 															</div>
 														</td>
@@ -383,7 +407,7 @@
 												</template>
 												<tr x-show="!devices.length">
 													<td
-														colspan="8"
+														colspan="10"
 														class="py-8 text-center text-gray-500"
 													>
 														暂无设备数据

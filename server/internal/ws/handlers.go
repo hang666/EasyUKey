@@ -194,6 +194,8 @@ func createCrossPlatformDevice(connMsg *messages.DeviceConnectionMessage, group 
 		DeviceGroupID:      &group.ID,
 		SerialNumber:       connMsg.SerialNumber,
 		VolumeSerialNumber: connMsg.VolumeSerialNumber,
+		Vendor:             connMsg.Vendor,
+		Model:              connMsg.Model,
 		Remark:             "跨平台自动识别",
 		IsActive:           false, // 重要：设为非激活状态
 		IsOnline:           true,

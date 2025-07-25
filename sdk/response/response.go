@@ -55,6 +55,8 @@ type DeviceResponse struct {
 	Name               string               `json:"name"`
 	SerialNumber       string               `json:"serial_number"`
 	VolumeSerialNumber string               `json:"volume_serial_number"`
+	Vendor             string               `json:"vendor"`
+	Model              string               `json:"model"`
 	Remark             string               `json:"remark"`
 	IsActive           bool                 `json:"is_active"`
 	IsOnline           bool                 `json:"is_online"`
