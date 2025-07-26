@@ -27,8 +27,9 @@ type AuthConfirmation struct {
 
 // AuthResult 认证结果结构
 type AuthResult struct {
-	Success bool   `json:"success"`
-	Message string `json:"message"`
+	Success   bool      `json:"success"`
+	Message   string    `json:"message"`
+	Timestamp time.Time `json:"timestamp"`
 }
 
 // AuthState 认证状态
@@ -129,23 +130,39 @@ func ShowPINSetupPage() error {
 	return OpenBrowser(url)
 }
 
+// resetState 重置认证状态的辅助函数
+func resetState() {
+	stateMutex.Lock()
+	currentState = StateIdle
+	currentReqID = ""
+	stateMutex.Unlock()
+}
+
 // WaitForResult 等待认证结果
 func WaitForResult(timeout time.Duration) (AuthResult, error) {
-	select {
-	case result := <-resultChan:
-		return result, nil
-	case <-time.After(timeout):
-		stateMutex.Lock()
-		currentState = StateIdle
-		currentReqID = ""
-		stateMutex.Unlock()
-		return AuthResult{}, fmt.Errorf("认证超时")
+	deadline := time.Now().Add(timeout)
+
+	for {
+		select {
+		case result := <-resultChan:
+			if time.Since(result.Timestamp) > 10*time.Second {
+				continue // 数据已过期，继续等待
+			}
+			return result, nil
+		case <-time.After(time.Until(deadline)):
+			resetState()
+			return AuthResult{}, fmt.Errorf("认证超时")
+		}
 	}
 }
 
 // SendResult 发送认证结果
 func SendResult(success bool, message string) {
-	result := AuthResult{Success: success, Message: message}
+	result := AuthResult{
+		Success:   success,
+		Message:   message,
+		Timestamp: time.Now(),
+	}
 
 	stateMutex.Lock()
 	currentState = StateCompleted
