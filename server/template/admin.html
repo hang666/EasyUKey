@@ -1126,13 +1126,6 @@
 																>
 																	<i class="fas fa-user mr-1"></i>关联用户
 																</button>
-																<button
-																	x-show="!group.is_active"
-																	@click="activateGroup(group.id)"
-																	class="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
-																>
-																	<i class="fas fa-check mr-1"></i>激活
-																</button>
 															</td>
 														</tr>
 													</template>
@@ -2475,24 +2468,6 @@
 							}
 						} catch (error) {
 							this.showMsg("获取设备组详情失败: " + error.message, "error");
-						}
-					},
-
-					async activateGroup(groupId) {
-						if (!confirm("确定要激活此设备组吗？")) return;
-
-						try {
-							const result = await this.api(
-								`/api/v1/admin/device-groups/${groupId}/activate`,
-								{ method: "POST" }
-							);
-
-							if (result.success) {
-								this.showMsg("设备组激活成功", "success");
-								await this.loadDeviceGroups();
-							}
-						} catch (error) {
-							this.showMsg("激活设备组失败: " + error.message, "error");
 						}
 					},
 
