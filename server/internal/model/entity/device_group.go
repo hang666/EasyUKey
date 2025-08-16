@@ -10,14 +10,14 @@ import (
 type DeviceGroup struct {
 	ID          uint     `gorm:"primaryKey" json:"id"`
 	UserID      *uint    `gorm:"index" json:"user_id"`                         // 外键，关联到User模型
-	Name        string   `gorm:"not null" json:"name"`                         // 设备组名称
+	Name        string   `gorm:"not null;type:varchar(255)" json:"name"`       // 设备组名称
 	Description string   `gorm:"type:text" json:"description"`                 // 设备组描述
 	Permissions []string `gorm:"type:json;serializer:json" json:"permissions"` // JSON存储权限列表
 
 	// 认证密钥统一管理
-	TOTPSecret      string `gorm:"not null;index" json:"-"` // TOTP密钥
-	OnceKey         string `gorm:"not null;index" json:"-"` // 当前有效的一次性密钥
-	LastUsedOnceKey string `gorm:"index" json:"-"`          // 上次使用的一次性密钥
+	TOTPSecret      string `gorm:"not null;type:varchar(500);index" json:"-"` // TOTP密钥
+	OnceKey         string `gorm:"not null;type:varchar(255);index" json:"-"` // 当前有效的一次性密钥
+	LastUsedOnceKey string `gorm:"type:varchar(255);index" json:"-"`          // 上次使用的一次性密钥
 
 	IsActive  bool           `gorm:"default:false;index" json:"is_active"` // 设备组是否激活
 	CreatedAt time.Time      `json:"created_at"`

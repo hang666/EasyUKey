@@ -8,16 +8,16 @@ import (
 
 // AuthSession 认证会话: 记录一次认证流程，由用户发起，由特定设备响应
 type AuthSession struct {
-	ID                 string         `gorm:"primaryKey" json:"id"`       // UUID
-	UserID             uint           `gorm:"not null" json:"user_id"`    // 发起认证的用户ID
-	APIKeyID           uint           `gorm:"not null" json:"api_key_id"` // 调用认证的API密钥ID
-	RespondingDeviceID *uint          `json:"responding_device_id"`       // 最终响应本次认证的设备主键 (Device.ID)
-	Challenge          string         `gorm:"not null" json:"challenge"`  // 挑战码
-	Action             string         `json:"action"`                     // 本次认证请求的操作/权限
-	Status             string         `gorm:"not null" json:"status"`     // 认证状态：pending, processing, processing_oncekey, completed, failed, expired, rejected
-	Result             string         `json:"result"`                     // 认证结果：success, failure
-	CallbackURL        string         `json:"callback_url"`               // 回调URL
-	ClientIP           string         `json:"client_ip"`                  // 客户端IP地址
+	ID                 string         `gorm:"primaryKey;type:varchar(255)" json:"id"`      // UUID
+	UserID             uint           `gorm:"not null" json:"user_id"`                     // 发起认证的用户ID
+	APIKeyID           uint           `gorm:"not null" json:"api_key_id"`                  // 调用认证的API密钥ID
+	RespondingDeviceID *uint          `json:"responding_device_id"`                        // 最终响应本次认证的设备主键 (Device.ID)
+	Challenge          string         `gorm:"not null;type:varchar(255)" json:"challenge"` // 挑战码
+	Action             string         `gorm:"type:varchar(255)" json:"action"`             // 本次认证请求的操作/权限
+	Status             string         `gorm:"not null;type:varchar(50)" json:"status"`     // 认证状态：pending, processing, processing_oncekey, completed, failed, expired, rejected
+	Result             string         `gorm:"type:varchar(50)" json:"result"`              // 认证结果：success, failure
+	CallbackURL        string         `gorm:"type:text" json:"callback_url"`               // 回调URL
+	ClientIP           string         `gorm:"type:varchar(45)" json:"client_ip"`           // 客户端IP地址
 	CreatedAt          time.Time      `json:"created_at"`
 	ExpiresAt          time.Time      `json:"expires_at"`
 	UpdatedAt          time.Time      `json:"updated_at"`
