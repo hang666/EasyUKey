@@ -61,9 +61,15 @@ func createNewDeviceWithGroup(initReq *messages.DeviceInitRequestMessage) (strin
 		return "", "", fmt.Errorf("开始事务失败: %w", tx.Error)
 	}
 
+	// 生成随机后缀
+	randomSuffix, err := GenerateRandomSuffix()
+	if err != nil {
+		return "", "", fmt.Errorf("生成随机后缀失败: %w", err)
+	}
+
 	// 创建设备组
 	deviceGroup := entity.DeviceGroup{
-		Name:        fmt.Sprintf("设备组_%s", initReq.SerialNumber[len(initReq.SerialNumber)-6:]),
+		Name:        fmt.Sprintf("设备组_%s_%s", initReq.SerialNumber[len(initReq.SerialNumber)-6:], randomSuffix),
 		Description: "设备初始化时自动创建",
 		TOTPSecret:  totpSecret,
 		OnceKey:     onceKey,
@@ -78,7 +84,7 @@ func createNewDeviceWithGroup(initReq *messages.DeviceInitRequestMessage) (strin
 
 	// 创建设备记录
 	device := entity.Device{
-		Name:               fmt.Sprintf("设备_%s", initReq.SerialNumber[len(initReq.SerialNumber)-6:]),
+		Name:               fmt.Sprintf("设备_%s_%s", initReq.SerialNumber[len(initReq.SerialNumber)-6:], randomSuffix),
 		DeviceGroupID:      &deviceGroup.ID,
 		SerialNumber:       initReq.SerialNumber,
 		VolumeSerialNumber: initReq.VolumeSerialNumber,
@@ -342,6 +348,16 @@ func GetDeviceStatistics() (int64, int64, int64, int64, error) {
 func GenerateOnceKey() (string, error) {
 	bytes := make([]byte, 32)
 	rand.Read(bytes)
+	return hex.EncodeToString(bytes), nil
+}
+
+// GenerateRandomSuffix 生成随机后缀字符串
+func GenerateRandomSuffix() (string, error) {
+	bytes := make([]byte, 3) // 3字节生成6位十六进制字符
+	_, err := rand.Read(bytes)
+	if err != nil {
+		return "", err
+	}
 	return hex.EncodeToString(bytes), nil
 }
 
